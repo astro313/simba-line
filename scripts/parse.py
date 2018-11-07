@@ -7,7 +7,7 @@ parse halo-galaxy catalog from caesar output file and get what i need.
 
 print("In the future, the following will be converted into a function in load_module.py")
 
-snapRange = [151]       # snaptable
+snapRange = [150, 151]       # snaptable
 raw_sim_dir = '/disk01/rad/sim/m25n256/s48/'
 raw_sim_name_prefix = 'snap_m25n256_'
 caesar_dir = '/disk01/rad/sim/m25n256/s48/Groups/'
@@ -74,10 +74,9 @@ def load_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshi
         rawSim = raw_sim_dir + raw_sim_name_prefix + \
             '{:>03}'.format(int(sss)) + '.hdf5'
         ds = yt.load(rawSim, over_refine_factor=1, index_ptype="all")
-        dd = ds.all_data()
-        print('Simulation type: ' + ds.dataset_type)
 
         if verbose:
+            print('Simulation type: ' + ds.dataset_type)
             print 'Total number of galaxies found: ' + str(obj.ngalaxies)
             Ngal = obj.ngalaxies
 
@@ -113,9 +112,12 @@ def load_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshi
                 numGal = len(obj.halos[hhh].galaxies)
                 print "Found total of {} galaxies in halo {}".format(numGal, hhh)
 
-        # some large number (larger than Ngalaxies=30, which is what Karen usually
-        # picks)
-        for GAL in range(200):
+        print("Selecing {} Galaxies with the highest SFRs across all halos in this snapshot, but you may want to galaxies based on different criteria.").format(Ngalaxies)
+        obj.galaxies.sort(key=lambda x: x.sfr, reverse=True)
+        if verbose:
+            print obj.galinfo(top=Ngalaxies)
+
+        for GAL in range(Ngalaxies):
             try:
                 SFR = float(obj.galaxies[GAL].sfr.d)
                 add_this = pd.DataFrame({'halo': [int(obj.galaxies[GAL].parent_halo_index)], 'snap': [
@@ -126,7 +128,7 @@ def load_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshi
             except:
                 break
 
-    print("Selecing {} Galaxies with the highest SFRs, but you may want to galaxies based on different criteria.").format(Ngalaxies)
+    print("Selecing {} Galaxies with the highest SFRs across snapshot 'snapRange', but you may want to galaxies based on different criteria.").format(Ngalaxies)
     galnames = galnames.sort_values(['SFR'], ascending=False).reset_index(drop=True)
     print galnames
     print("Note to self: Remember to change variable global_save_file in param.py so that naming is consistent with Ngalaxies we are picking here")
@@ -137,6 +139,15 @@ def load_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshi
     # SFR of galaxy averaged over past 100 Myr and SFR of halo
     SFRg, SFRh = np.zeros(Ngalaxies), np.zeros(Ngalaxies)
     for halo, snap, GAL, sfr in zip(galnames['halo'].values, galnames['snap'].values, galnames['GAL'].values, galnames['SFR'].values):
+
+        infile = caesar_dir + name_prefix + '{:0>3}'.format(int(snap)) + \
+            '.hdf5'
+        print("Loading Ceasar file: {}").format(infile)
+        obj = caesar.load(infile)
+
+        rawSim = raw_sim_dir + raw_sim_name_prefix + \
+            '{:>03}'.format(int(snap)) + '.hdf5'
+        ds = yt.load(rawSim, over_refine_factor=1, index_ptype="all")
 
         zred = '{:.3f}'.format(zs_table[snaps_table == snap][0])
         print('\nNow looking at galaxy # %s with parent halo ID %s in snapshot %s at z = %s' % (
@@ -202,8 +213,7 @@ def load_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshi
 
             print('\nChecking molecular gas mass fraction:')
             try:
-                print('%.3s %% using RT prescription' %
-                      (np.sum(gas_m * gas_f_H2) / np.sum(gas_m) * 100.))
+                print('{:.2s}%% using RT prescription'.format((np.sum(gas_m * gas_f_H2) / np.sum(gas_m) * 100.)))
             except:
                 print("Need to first fix the issue w/ missing UVB in .treecool_data")
             print('%.3s %% using simulation\n' %
@@ -319,14 +329,7 @@ def load_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshi
 
     return galnames_selected, zreds_selected
 
+
 xx, yy = load_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, snapRange, Nhalo, Ngalaxies)
 
-# # -------------------------------- well -------------------------
-# # A much faster and simpler way of picking out the Ngalaxies most
-# # star-forming galaxies
-# print obj.galinfo(top=Ngalaxies)
-# for ggg in range(Ngalaxies):
-#     print"SFR: {}".format(obj.galaxies[ggg].sfr.d)
 
-# obj.galaxies.sort(key=lambda x: x.sfr, reverse=True)
-# print obj.galinfo(top=Ngalaxies)
