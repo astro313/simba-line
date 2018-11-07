@@ -4,20 +4,6 @@ parse halo-galaxy catalog from caesar output file and get what i need.
 
 '''
 
-
-print("In the future, the following will be converted into a function in load_module.py")
-
-snapRange = [150, 151]       # snaptable
-raw_sim_dir = '/disk01/rad/sim/m25n256/s48/'
-raw_sim_name_prefix = 'snap_m25n256_'
-caesar_dir = '/disk01/rad/sim/m25n256/s48/Groups/'
-name_prefix = 'm25n256_'
-redshiftFile = '/home/rad/gizmo-extra/outputs_boxspace50.info'
-
-Nhalo = 2  # 10
-Ngalaxies = 2    # 20
-
-
 def select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Nhalo, Ngalaxies, verbose=False, debug=False):
 
     '''
@@ -77,15 +63,6 @@ def select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_p
                                           for i in obj.galaxies[:Ngalaxies] if i.central]
             print 'Where {}% are centrals'.format(len(central_galaxy_halo_masses) * 100. / Ngalaxies)
 
-            print('Info for this snapshot:')
-            omega_baryon = obj.simulation.omega_baryon
-            omega_matter = obj.simulation.omega_matter
-            hubble_constant = obj.simulation.hubble_constant
-            print('Omega baryon: %s' % omega_baryon)
-            print('Omega matter: %s' % omega_matter)
-            print('Hubble constant: %s' % hubble_constant)
-            print('XH: %s' % obj.simulation.XH)
-
             print("The top Ngalaxies most massive galaxies reside in halos ID: ")
             for ggg in range(Ngalaxies):
                 # all fields:
@@ -123,7 +100,7 @@ def select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_p
     return galnames
 
 
-def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, verbose=False, debug=False):
+def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, zCloudy, verbose=False, debug=False):
 
     '''
         write out useful fields gas, stars, DM particles of the selected galaxies into DataFrames
@@ -142,6 +119,10 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
         predix to file of caesar outputs
     redshiftFile: str
         where to look for the redshift info for this particular set of snapshots
+    d_data: str
+        directory location to save dataframe files
+    zCloudy: int
+        redshift at which we plan on running cloudy grids, which is also how we pick the naming scheme for d_data
 
     Returns
     -------
@@ -156,16 +137,16 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
     import yt
     import numpy as np
     import pandas as pd
-    from load_module import hydrogen_mass_calc, center_cut_galaxy
+    from load_module import hydrogen_mass_calc, center_cut_galaxy    # issue with this is it now needs a dummy temp_params.npy even though we don't use any variables defined inside.. Maybe we will define them in this .py file and not import from load_module.
+    import os
+
+    kpc2m = 3.085677580666e19
 
     # Save the names and redshift for the galaxies that we finally decide to save in DataFrames:
     galnames_selected   =   []
     zreds_selected      =   np.array([])
 
     _, zs_table, snaps_table = np.loadtxt(redshiftFile, unpack=True)
-
-    # SFR of galaxy averaged over past 100 Myr and SFR of halo
-    SFRg, SFRh = np.zeros(Ngalaxies), np.zeros(Ngalaxies)
 
     for halo, snap, GAL, sfr in zip(galnames['halo'].values, galnames['snap'].values, galnames['GAL'].values, galnames['SFR'].values):
 
@@ -206,7 +187,7 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
 
         if debug:
             print("List all stuff inside the raw sim .hdf5")
-            os.system('h5ls -r ' + a)
+            os.system('h5ls -r ' + rawSim)
 
             print("")
             print ds.field_list
@@ -295,6 +276,15 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
             star_Z = sphere['PartType4', 'Metallicity_00'].d / \
                 0.0134               # from RD
 
+            print('Info for this snapshot:')
+            omega_baryon = obj.simulation.omega_baryon
+            omega_matter = obj.simulation.omega_matter
+            hubble_constant = obj.simulation.hubble_constant
+            print('Omega baryon: %s' % omega_baryon)
+            print('Omega matter: %s' % omega_matter)
+            print('Hubble constant: %s' % hubble_constant)
+            print('XH: %s' % obj.simulation.XH)
+
             current_time = ds.current_time.in_units('yr') / 1.e6  # Myr
             # in scale factors, do as with Illustris
             star_formation_a = sphere['PartType4', 'StellarFormationTime'].d
@@ -305,26 +295,30 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
             star_formation_t *=  kpc2m / 100. / (1e6 * 365.25 * 86400)  # Myr
             star_age = current_time.d - star_formation_t
 
-
             print('Extracting all DM particle properties...')
             dm_pos_all = sphere['PartType1', 'Coordinates'].in_units('kpc')
             dm_pos = dm_pos_all - loc
             dm_pos = caesar.utils.rotator(dm_pos, galaxy.rotation_angles[
                                           'ALPHA'], galaxy.rotation_angles['BETA'])
-            dm_posx, dm_posy, dm_posz = dm_pos[
-                :, 0].d, dm_pos[:, 1].d, dm_pos[:, 2].d
+            dm_posx, dm_posy, dm_posz = dm_pos[:, 0].d, dm_pos[:, 1].d, dm_pos[:, 2].d
             dm_vel = sphere['PartType1', 'Velocities'].in_cgs() / 1e5
             dm_vel = caesar.utils.rotator(dm_vel, galaxy.rotation_angles[
                                           'ALPHA'], galaxy.rotation_angles['BETA'])
-            dm_velx, dm_vely, dm_velz = dm_vel[
-                :, 0].d, dm_vel[:, 1].d, dm_vel[:, 2].d
+            dm_velx, dm_vely, dm_velz = dm_vel[:, 0].d, dm_vel[:, 1].d, dm_vel[:, 2].d
             dm_m = sphere['PartType1', 'Masses'].in_units('Msun')
 
             # Put into dataframes:
+            print("*** After fixing hydrogen_mass_calc, update following line *** ")
+            # simgas = pd.DataFrame({'x': gas_posx, 'y': gas_posy, 'z': gas_posz,
+            #                        'vx': gas_velx, 'vy': gas_vely, 'vz': gas_velz,
+            #                        'SFR': gas_SFR, 'Z': gas_Z, 'nH': gas_densities, 'Tk': gas_Tk, 'h': gas_h,
+            #                        'f_HI': gas_f_HI, 'f_H2': gas_f_H2, 'f_neu': gas_f_neu, 'f_HI1': gas_f_HI1, 'f_H21': gas_f_H21, 'm': gas_m,
+            #                        'a_He': gas_a_He, 'a_C': gas_a_C, 'a_N': gas_a_N, 'a_O': gas_a_O, 'a_Ne': gas_a_Ne, 'a_Mg': gas_a_Mg,
+            #                        'a_Si': gas_a_Si, 'a_S': gas_a_S, 'a_Ca': gas_a_Ca, 'a_Fe': gas_a_Fe})
             simgas = pd.DataFrame({'x': gas_posx, 'y': gas_posy, 'z': gas_posz,
                                    'vx': gas_velx, 'vy': gas_vely, 'vz': gas_velz,
                                    'SFR': gas_SFR, 'Z': gas_Z, 'nH': gas_densities, 'Tk': gas_Tk, 'h': gas_h,
-                                   'f_HI': gas_f_HI, 'f_H2': gas_f_H2, 'f_neu': gas_f_neu, 'f_HI1': gas_f_HI1, 'f_H21': gas_f_H21, 'm': gas_m,
+                                   'f_HI1': gas_f_HI1, 'f_neu': gas_f_neu, 'f_H21': gas_f_H21, 'm': gas_m,
                                    'a_He': gas_a_He, 'a_C': gas_a_C, 'a_N': gas_a_N, 'a_O': gas_a_O, 'a_Ne': gas_a_Ne, 'a_Mg': gas_a_Mg,
                                    'a_Si': gas_a_Si, 'a_S': gas_a_S, 'a_Ca': gas_a_Ca, 'a_Fe': gas_a_Fe})
             simstar = pd.DataFrame({'x': star_posx, 'y': star_posy, 'z': star_posz,
@@ -344,12 +338,17 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
             print('Estimated SFR for this galaxy averaged over past 100 Myr: ' + str(SFR_avg))
             print('SFR in simulation: %s' % galaxy.sfr)
             print('SFR for parent halo: %s' % galaxy.halo.sfr)
-            SFRg[i] = SFR_avg
-            SFRh[i] = galaxy.halo.sfr.d
 
             print('Stellar mass: %s Msun' % np.sum(m_star))
             print('Dark matter mass: %s ' % np.sum(dm_m))
-            print('Saving galaxy data as DataFrames in {}, as defined in __init__.py').format(d_data)
+
+            print('Saving galaxy data as DataFrames in {}').format(d_data)
+            # replace w/ this line if we decide to merge this func to load_module.py and call via parameters_zx.txt
+            # print('Saving galaxy data as DataFrames in {}, as defined in __init__.py').format(d_data)
+
+            savepath = d_data + 'particle_data/sim_data/'
+            if not os.path.exists(savepath):
+                os.makedirs(savepath)
 
             simgas.to_pickle(d_data + 'particle_data/sim_data/z' +
                              '{:.2f}'.format(float(zred)) + '_' + galname + '_sim.gas')
@@ -361,11 +360,34 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
             galnames_selected.append(galname)
             zreds_selected = np.append(zreds_selected, float(zred))
 
+    # Book-keeping
+    import cPickle
+    models = {'galnames_unsorted': galnames_selected,
+              'zreds_unsorted': zreds_selected}
+    cPickle.dump(models, open('/home/dleung/Downloads/SIGAME_dev/sigame/temp/global_results/galnames_simba_z' + str(int(zCloudy)) + '.pkl', 'wb'))
+    print('Number of galaxies in entire sample extracted from Simba data to : {}'.format(str(len(galnames_selected))))
+
     return galnames_selected, zreds_selected
 
 
-ggg = select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Nhalo, Ngalaxies)
 
-xx, yy = simba_to_pd(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile)
+if __name__ == '__main__':
+
+    snapRange = [150, 151]       # snaptable
+    zCloudy = 0
+    d_data = '/home/dleung/Downloads/SIGAME_dev/sigame/temp/z' + str(int(zCloudy)) + '_data_files/'  #z0
+
+    raw_sim_dir = '/disk01/rad/sim/m25n256/s48/'
+    raw_sim_name_prefix = 'snap_m25n256_'
+    caesar_dir = '/disk01/rad/sim/m25n256/s48/Groups/'
+    name_prefix = 'm25n256_'
+    redshiftFile = '/home/rad/gizmo-extra/outputs_boxspace50.info'
+
+    Nhalo = 2  # 10
+    Ngalaxies = 2    # 20
+
+    ggg = select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Nhalo, Ngalaxies)
+
+    xx, yy = simba_to_pd(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, zCloudy)
 
 
