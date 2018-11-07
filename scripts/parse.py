@@ -18,7 +18,7 @@ Nhalo = 2  # 10
 Ngalaxies = 2    # 20
 
 
-def load_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, snapRange, Nhalo, Ngalaxies, verbose=False, debug=False)
+def load_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, snapRange, Nhalo, Ngalaxies, verbose=False, debug=False):
 
     '''
     Parameters
@@ -319,13 +319,14 @@ def load_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshi
 
     return galnames_selected, zreds_selected
 
+xx, yy = load_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, snapRange, Nhalo, Ngalaxies)
 
-# -------------------------------- well -------------------------
-# A much faster and simpler way of picking out the Ngalaxies most
-# star-forming galaxies
-print obj.galinfo(top=Ngalaxies)
-for ggg in range(Ngalaxies):
-    print"SFR: {}".format(obj.galaxies[ggg].sfr.d)
+# # -------------------------------- well -------------------------
+# # A much faster and simpler way of picking out the Ngalaxies most
+# # star-forming galaxies
+# print obj.galinfo(top=Ngalaxies)
+# for ggg in range(Ngalaxies):
+#     print"SFR: {}".format(obj.galaxies[ggg].sfr.d)
 
-obj.galaxies.sort(key=lambda x: x.sfr, reverse=True)
-print obj.galinfo(top=Ngalaxies)
+# obj.galaxies.sort(key=lambda x: x.sfr, reverse=True)
+# print obj.galinfo(top=Ngalaxies)
