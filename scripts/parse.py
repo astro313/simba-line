@@ -94,7 +94,7 @@ def select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_p
     galnames = galnames.sort_values(['SFR'], ascending=False).reset_index(drop=True)
     if debug:
         print galnames
-    print("Note to self: Remember to change variable global_save_file in param.py so that naming is consistent with Ngalaxies we are picking here")
+    print("Note to self: Remember to change variable global_save_files in param.py so that naming is consistent with Ngalaxies we are picking here")
     galnames = galnames[:Ngalaxies]
     print galnames
     return galnames
@@ -360,11 +360,14 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
             galnames_selected.append(galname)
             zreds_selected = np.append(zreds_selected, float(zred))
 
-    # Book-keeping
     import cPickle
     models = {'galnames_unsorted': galnames_selected,
               'zreds_unsorted': zreds_selected}
-    cPickle.dump(models, open('/home/dleung/Downloads/SIGAME_dev/sigame/temp/global_results/galnames_simba_z' + str(int(zCloudy)) + '.pkl', 'wb'))
+    # call by global_results.py
+    outname = '/home/dleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + 'extracted_gals'
+    if os.path.exists(outname):     # make a back up copy if exist
+        os.system('mv ' + outname + ' ' + outname + '.bak')
+    cPickle.dump(models, open(outname, 'wb'))
     print('Number of galaxies in entire sample extracted from Simba data to : {}'.format(str(len(galnames_selected))))
 
     return galnames_selected, zreds_selected
