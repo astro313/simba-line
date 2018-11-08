@@ -221,7 +221,7 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
 
             print('\nChecking molecular gas mass fraction from simulation:')
             print('%.3s %% \n' %
-                  (np.sum(gas_m * gas_f_H21) / np.sum(gas_m) * 100.))
+                  (np.sum(gas_m * gas_f_H2) / np.sum(gas_m) * 100.))
 
             # Tk
             gas_Tk = sphere['PartType0', 'Temperature']
@@ -299,7 +299,7 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
             simgas = pd.DataFrame({'x': gas_posx, 'y': gas_posy, 'z': gas_posz,
                                    'vx': gas_velx, 'vy': gas_vely, 'vz': gas_velz,
                                    'SFR': gas_SFR, 'Z': gas_Z, 'nH': gas_densities, 'Tk': gas_Tk, 'h': gas_h,
-                                   'f_HI': gas_f_HI, 'f_neu': gas_f_neu, 'f_H2': gas_f_H2, 'm': gas_m,
+                                   'f_HI1': gas_f_HI, 'f_neu': gas_f_neu, 'f_H21': gas_f_H2, 'm': gas_m,
                                    'a_He': gas_a_He, 'a_C': gas_a_C, 'a_N': gas_a_N, 'a_O': gas_a_O, 'a_Ne': gas_a_Ne, 'a_Mg': gas_a_Mg,
                                    'a_Si': gas_a_Si, 'a_S': gas_a_S, 'a_Ca': gas_a_Ca, 'a_Fe': gas_a_Fe})
             simstar = pd.DataFrame({'x': star_posx, 'y': star_posy, 'z': star_posz,
