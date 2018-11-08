@@ -137,7 +137,7 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
     import yt
     import numpy as np
     import pandas as pd
-    from load_module import hydrogen_mass_calc, center_cut_galaxy    # issue with this is it now needs a dummy temp_params.npy even though we don't use any variables defined inside.. Maybe we will define them in this .py file and not import from load_module.
+    from load_module import center_cut_galaxy    # issue with this is it now needs a dummy temp_params.npy even though we don't use any variables defined inside.. Maybe we will define them in this .py file and not import from load_module.
     import os
 
     kpc2m = 3.085677580666e19
@@ -207,32 +207,20 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
                 :, 0].d, gas_vel[:, 1].d, gas_vel[:, 2].d
 
             gas_densities = sphere['PartType0', 'Density'].in_cgs()
-            gas_f_H21 = sphere['PartType0', 'FractionH2']
+            gas_f_H2 = sphere['PartType0', 'FractionH2']
             gas_f_neu = sphere['PartType0', 'NeutralHydrogenAbundance']
             gas_m = sphere['PartType0', 'Masses'].in_units('Msun')
             # electrons per Hydrogen atom (max: 1.15)
             gas_x_e = sphere['PartType0', 'ElectronAbundance']
 
             # ionized gas mass fraction (because we don't trust
-            # NeutralHydrogenAbundance)
+            # NeutralHydrogenAbundance -- which only includes atomic gas but not moleuclar)
+            # At the end, calculated from
             gas_f_ion = gas_x_e / max(gas_x_e)
-            gas_f_HI1 = 1 - gas_f_ion
+            gas_f_HI = 1 - gas_f_ion
 
-            try:
-                gas_f_HI, gas_f_H2 = hydrogen_mass_calc(obj, sphere)
-                print gas_f_HI, gas_f_HI1
-                print gas_f_H2, gas_f_H21
-                import pdb
-                pdb.set_trace()
-            except ValueError:
-                print("Talk to Karen about this")
-
-            print('\nChecking molecular gas mass fraction:')
-            try:
-                print('{:.2s}%% using RT prescription'.format((np.sum(gas_m * gas_f_H2) / np.sum(gas_m) * 100.)))
-            except:
-                print("Need to first fix the issue w/ missing UVB in .treecool_data")
-            print('%.3s %% using simulation\n' %
+            print('\nChecking molecular gas mass fraction from simulation:')
+            print('%.3s %% \n' %
                   (np.sum(gas_m * gas_f_H21) / np.sum(gas_m) * 100.))
 
             # Tk
@@ -308,17 +296,10 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
             dm_m = sphere['PartType1', 'Masses'].in_units('Msun')
 
             # Put into dataframes:
-            print("*** After fixing hydrogen_mass_calc, update following line *** ")
-            # simgas = pd.DataFrame({'x': gas_posx, 'y': gas_posy, 'z': gas_posz,
-            #                        'vx': gas_velx, 'vy': gas_vely, 'vz': gas_velz,
-            #                        'SFR': gas_SFR, 'Z': gas_Z, 'nH': gas_densities, 'Tk': gas_Tk, 'h': gas_h,
-            #                        'f_HI': gas_f_HI, 'f_H2': gas_f_H2, 'f_neu': gas_f_neu, 'f_HI1': gas_f_HI1, 'f_H21': gas_f_H21, 'm': gas_m,
-            #                        'a_He': gas_a_He, 'a_C': gas_a_C, 'a_N': gas_a_N, 'a_O': gas_a_O, 'a_Ne': gas_a_Ne, 'a_Mg': gas_a_Mg,
-            #                        'a_Si': gas_a_Si, 'a_S': gas_a_S, 'a_Ca': gas_a_Ca, 'a_Fe': gas_a_Fe})
             simgas = pd.DataFrame({'x': gas_posx, 'y': gas_posy, 'z': gas_posz,
                                    'vx': gas_velx, 'vy': gas_vely, 'vz': gas_velz,
                                    'SFR': gas_SFR, 'Z': gas_Z, 'nH': gas_densities, 'Tk': gas_Tk, 'h': gas_h,
-                                   'f_HI1': gas_f_HI1, 'f_neu': gas_f_neu, 'f_H21': gas_f_H21, 'm': gas_m,
+                                   'f_HI': gas_f_HI, 'f_neu': gas_f_neu, 'f_H2': gas_f_H2, 'm': gas_m,
                                    'a_He': gas_a_He, 'a_C': gas_a_C, 'a_N': gas_a_N, 'a_O': gas_a_O, 'a_Ne': gas_a_Ne, 'a_Mg': gas_a_Mg,
                                    'a_Si': gas_a_Si, 'a_S': gas_a_S, 'a_Ca': gas_a_Ca, 'a_Fe': gas_a_Fe})
             simstar = pd.DataFrame({'x': star_posx, 'y': star_posy, 'z': star_posz,
