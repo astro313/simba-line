@@ -100,7 +100,7 @@ def select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_p
     return galnames
 
 
-def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, zCloudy, verbose=False, debug=False):
+def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, zCloudy, plotgas=False, verbose=False, debug=False):
 
     '''
         write out useful fields gas, stars, DM particles of the selected galaxies into DataFrames
@@ -123,6 +123,8 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
         directory location to save dataframe files
     zCloudy: int
         redshift at which we plan on running cloudy grids, which is also how we pick the naming scheme for d_data
+    plotgas: bool
+        if we will plot the gas distribution from the simulation output
 
     Returns
     -------
@@ -341,11 +343,29 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
             galnames_selected.append(galname)
             zreds_selected = np.append(zreds_selected, float(zred))
 
+            if plotgas:
+                import matplotlib.pyplot as plt
+                from mpl_toolkits.axes_grid1 import AxesGrid
+                # projection plot
+                plt.close('all')
+
+                savepath = 'plots/sims/'
+                if not os.path.exists(savepath):
+                    os.makedirs(savepath)
+                p = yt.ProjectionPlot(ds, 0, 'density',
+                                      center=sphere.center.value,
+                                      width=(70.0, 'kpc'),
+                                        # center='c',
+                                      weight_field='density')
+
+                filename = 'z' + '{:.2f}'.format(float(zred)) + '_' + galname + '_gas.pdf'
+                p.save(os.path.join(savepath, filename))
+
     import cPickle
     models = {'galnames_unsorted': galnames_selected,
               'zreds_unsorted': zreds_selected}
     # call by global_results.py
-    outname = '/home/dleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + 'extracted_gals'
+    outname = '/home/dleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals'
     if os.path.exists(outname):     # make a back up copy if exist
         os.system('mv ' + outname + ' ' + outname + '.bak')
     cPickle.dump(models, open(outname, 'wb'))
@@ -372,6 +392,6 @@ if __name__ == '__main__':
 
     ggg = select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Nhalo, Ngalaxies)
 
-    xx, yy = simba_to_pd(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, zCloudy)
+    xx, yy = simba_to_pd(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, zCloudy, plotgas=True)
 
 
