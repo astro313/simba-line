@@ -375,6 +375,140 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
 
 
 
+def plot_BH(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, verbose=False, debug=False):
+
+    """
+
+    Attempt to plot BH particle spatial distribution.
+
+    """
+
+    import caesar
+    import yt
+    import numpy as np
+    import os
+
+    kpc2m = 3.085677580666e19
+
+    # Save the names and redshift for the galaxies that we finally decide to save in DataFrames:
+    galnames_selected   =   []
+    zreds_selected      =   np.array([])
+
+    _, zs_table, snaps_table = np.loadtxt(redshiftFile, unpack=True)
+
+    for halo, snap, GAL, sfr in zip(galnames['halo'].values, galnames['snap'].values, galnames['GAL'].values, galnames['SFR'].values):
+
+        infile = caesar_dir + name_prefix + '{:0>3}'.format(int(snap)) + \
+            '.hdf5'
+        print("Loading Ceasar file: {}").format(infile)
+        obj = caesar.load(infile)
+
+        rawSim = raw_sim_dir + raw_sim_name_prefix + \
+            '{:>03}'.format(int(snap)) + '.hdf5'
+        ds = yt.load(rawSim, over_refine_factor=1, index_ptype="all")
+
+        if verbose:
+            print('Info for this snapshot:')
+            print('Simulation type: ' + ds.dataset_type)
+            for key in ds.parameters.keys():
+                print('%s = %s' % (key, ds.parameters[key]))
+
+        zred = '{:.3f}'.format(zs_table[snaps_table == snap][0])
+        print('\nNow looking at galaxy # %s with parent halo ID %s in snapshot %s at z = %s' % (
+            int(GAL), int(halo), int(snap), zred))
+
+        print('Creating galaxy name:')
+        galname = 'h' + str(int(halo)) + '_s' + \
+            str(int(snap)) + '_G' + str(int(GAL))
+        print(galname)
+        galaxy = obj.galaxies[GAL]
+
+        # Get location and radius for each galaxy belonging to this haloID:
+        loc = galaxy.pos
+        R_gal = galaxy.radius       # kpccm, i.e., co-moving
+        print('Cut out a sphere with radius %s ' % R_gal)
+        sphere = ds.sphere(loc, R_gal)
+
+        if debug:
+            print("List all stuff inside the raw sim .hdf5")
+            os.system('h5ls -r ' + rawSim)
+
+            print("")
+            print ds.field_list
+
+        print('Extracting all BH particle properties...')
+        BH_pos = sphere['PartType5', 'Coordinates'].in_units('kpc') - loc
+        print('%s BH particles' % len(BH_pos))
+
+        if len(BH_pos) > 0:
+            BH_pos = caesar.utils.rotator(BH_pos, galaxy.rotation_angles[
+                                            'ALPHA'], galaxy.rotation_angles['BETA'])
+            BH_posx, BH_posy, BH_posz = BH_pos[
+                :, 0].d, BH_pos[:, 1].d, BH_pos[:, 2].d
+
+            BH_vel = sphere['PartType5', 'Velocities'].in_cgs() / 1e5
+            BH_vel = caesar.utils.rotator(BH_vel, galaxy.rotation_angles[
+                                            'ALPHA'], galaxy.rotation_angles['BETA'])
+            BH_velx, BH_vely, BH_velz = BH_vel[
+                :, 0].d, BH_vel[:, 1].d, BH_vel[:, 2].d
+
+            BH_m = sphere['PartType5', 'BH_Mass'].in_units('Msun')
+            BH_m2 = sphere['PartType5', 'Masses'].in_units('Msun')
+            print BH_m
+            print BH_m2
+            BH_mdot = sphere['PartType5', 'BH_Mdot']
+            print BH_mdot
+
+            import matplotlib.pyplot as plt
+            # projection plot
+            plt.close('all')
+
+            savepath = 'plots/sims/'
+            if not os.path.exists(savepath):
+                os.makedirs(savepath)
+
+            p = yt.ParticleProjectionPlot(ds, 0, [('PartType5', 'BH_Mdot')],
+                                  center=sphere.center.value,
+                                  width=(1.5, 'kpc'))
+            filename = 'z' + '{:.2f}'.format(float(zred)) + '_' + galname + '_BH_Mdot_projection.pdf'
+            p.save(os.path.join(savepath, filename))
+
+
+            p = yt.ParticleProjectionPlot(ds, 0, [('PartType5', 'BH_Mass')],
+                                  center=sphere.center.value,
+                                  width=(1.5, 'kpc'))
+            filename = 'z' + '{:.2f}'.format(float(zred)) + '_' + galname + '_BH_BH_Mass_projection.pdf'
+            p.save(os.path.join(savepath, filename))
+
+
+
+            p = yt.ParticlePlot(ds, 'particle_position_x', 'particle_position_y', ('PartType5', 'BH_Mdot'),
+                                  center=sphere.center.value,
+                                  width=(1.5, 'kpc'))
+            filename = 'z' + '{:.2f}'.format(float(zred)) + '_' + galname + '_BH_Mdot.pdf'
+            p.save(os.path.join(savepath, filename))
+
+
+            p = yt.ParticlePlot(ds, 'particle_position_x', 'particle_position_y', ('PartType5', 'BH_Mass'),
+                                  center=sphere.center.value,
+                                  width=(1.5, 'kpc'))
+            p.set_unit('particle_mass', 'Msun')
+
+            filename = 'z' + '{:.2f}'.format(float(zred)) + '_' + galname + '_BH_BH_Mass.pdf'
+            p.save(os.path.join(savepath, filename))
+
+
+            p = yt.ParticlePlot(ds, 'particle_position_x', 'particle_position_y', ('PartType5', 'Masses'),
+                                  center=sphere.center.value,
+                                  width=(1.5, 'kpc'))
+
+            filename = 'z' + '{:.2f}'.format(float(zred)) + '_' + galname + '_BH_Masses.pdf'
+            p.save(os.path.join(savepath, filename))
+
+    return None
+
+
+
 if __name__ == '__main__':
 
     snapRange = [150, 151]       # snaptable
@@ -392,6 +526,7 @@ if __name__ == '__main__':
 
     ggg = select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Nhalo, Ngalaxies)
 
-    xx, yy = simba_to_pd(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, zCloudy, plotgas=True)
+    xx, yy = simba_to_pd(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, zCloudy, plotgas=False)
 
+    plot_BH(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile)
 
