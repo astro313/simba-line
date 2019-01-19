@@ -4,7 +4,7 @@ parse halo-galaxy catalog from caesar output file and get what i need.
 
 '''
 
-def get_basic_info_from_caesarCat(snapRange, caesar_dir, name_prefix):
+def get_basic_info_from_caesarCat(snapRange, Nhalo, Ngalaxies, caesar_dir, name_prefix):
 
     """
 
@@ -43,10 +43,10 @@ def get_basic_info_from_caesarCat(snapRange, caesar_dir, name_prefix):
         numGal = len(obj.halos[hhh].galaxies)
         print "Found total of {} galaxies in halo {}".format(numGal, hhh)
 
-    return None
+    return Ngal
 
 
-def select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Nhalo, Ngalaxies, verbose=False, debug=False):
+def select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Ngalaxies, verbose=False, debug=False):
 
     '''
         pick out the 'Ngalaxies' most star-forming galaxies across snapshots 'snapRange'
@@ -63,8 +63,6 @@ def select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_p
         predix to file of caesar outputs
     snapRange: list of int
         snapshots to look for galaxies
-    Nhalo: int
-        doesn't affect output, just to look at info on the most massive Nhalo halos
     Ngalaxies: int
         how many galaxies from each snapshot across all halos do we want as output
 
@@ -513,8 +511,8 @@ if __name__ == '__main__':
     Nhalo = 2  # 10
     Ngalaxies = 2    # 20
 
-    get_basic_info_from_caesarCat(snapRange, caesar_dir, name_prefix)
-    ggg = select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Nhalo, Ngalaxies)
+    get_basic_info_from_caesarCat(snapRange, Nhalo, Ngalaxies, caesar_dir, name_prefix)
+    ggg = select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Ngalaxies)
 
     xx, yy = simba_to_pd(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, zCloudy, plotgas=False)
 
