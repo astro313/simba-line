@@ -4,6 +4,48 @@ parse halo-galaxy catalog from caesar output file and get what i need.
 
 '''
 
+def get_basic_info_from_caesarCat(snapRange, caesar_dir, name_prefix):
+
+    """
+
+    Read the caesar file and get some basic info on num of galaxy in those snapshots
+
+    """
+
+    import caesar
+    for ii, sss in enumerate(snapRange):
+        infile = caesar_dir + name_prefix + '{:0>3}'.format(int(sss)) + \
+            '.hdf5'
+        print("Loading Ceasar file: {}").format(infile)
+        obj = caesar.load(infile)
+
+    print 'Total number of galaxies found: ' + str(obj.ngalaxies)
+    Ngal = obj.ngalaxies
+
+    print 'Info on the massive {} halos: '.format(Nhalo)
+    print obj.haloinfo(top=Nhalo)
+
+    print 'Info on the massive {} galaxies across all haloes: '.format(Ngalaxies)
+    print obj.galinfo(top=Ngalaxies)
+
+    central_galaxy_halo_masses = [i.halo.masses['total']
+                                  for i in obj.galaxies[:Ngalaxies] if i.central]
+    print 'Where {}% are centrals'.format(len(central_galaxy_halo_masses) * 100. / Ngalaxies)
+
+    print("The top Ngalaxies most massive galaxies reside in halos ID: ")
+    for ggg in range(Ngalaxies):
+        # all fields:
+        # print obj.galaxies[ggg].info()
+        print "Halo ID: {}".format(obj.galaxies[ggg].parent_halo_index)
+
+    print("\nCount the number of galaxies in each massive halo among top Nhalo: ")
+    for hhh in range(Nhalo):
+        numGal = len(obj.halos[hhh].galaxies)
+        print "Found total of {} galaxies in halo {}".format(numGal, hhh)
+
+    return None
+
+
 def select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Nhalo, Ngalaxies, verbose=False, debug=False):
 
     '''
@@ -48,31 +90,6 @@ def select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_p
             '.hdf5'
         print("Loading Ceasar file: {}").format(infile)
         obj = caesar.load(infile)
-
-        if verbose:
-            print 'Total number of galaxies found: ' + str(obj.ngalaxies)
-            Ngal = obj.ngalaxies
-
-            print 'Info on the massive {} halos: '.format(Nhalo)
-            print obj.haloinfo(top=Nhalo)
-
-            print 'Info on the massive {} galaxies across all haloes: '.format(Ngalaxies)
-            print obj.galinfo(top=Ngalaxies)
-
-            central_galaxy_halo_masses = [i.halo.masses['total']
-                                          for i in obj.galaxies[:Ngalaxies] if i.central]
-            print 'Where {}% are centrals'.format(len(central_galaxy_halo_masses) * 100. / Ngalaxies)
-
-            print("The top Ngalaxies most massive galaxies reside in halos ID: ")
-            for ggg in range(Ngalaxies):
-                # all fields:
-                # print obj.galaxies[ggg].info()
-                print "Halo ID: {}".format(obj.galaxies[ggg].parent_halo_index)
-
-            print("\nCount the number of galaxies in each massive halo among top Nhalo: ")
-            for hhh in range(Nhalo):
-                numGal = len(obj.halos[hhh].galaxies)
-                print "Found total of {} galaxies in halo {}".format(numGal, hhh)
 
         print("\nSelecing {} Galaxies with the highest SFRs across all halos in this snapshot, but you may want to galaxies based on different criteria.").format(Ngalaxies)
         obj.galaxies.sort(key=lambda x: x.sfr, reverse=True)
@@ -496,9 +513,10 @@ if __name__ == '__main__':
     Nhalo = 2  # 10
     Ngalaxies = 2    # 20
 
+    get_basic_info_from_caesarCat(snapRange, caesar_dir, name_prefix)
     ggg = select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Nhalo, Ngalaxies)
 
-    # xx, yy = simba_to_pd(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, zCloudy, plotgas=False)
+    xx, yy = simba_to_pd(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, zCloudy, plotgas=False)
 
     fetch_BH(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile)
 
