@@ -375,11 +375,11 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
 
 
 
-def plot_BH(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, verbose=False, debug=False):
+def fetch_BH(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, verbose=False, debug=False):
 
     """
 
-    Attempt to plot BH particle spatial distribution.
+    get BH particles info.
 
     """
 
@@ -387,6 +387,7 @@ def plot_BH(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix,
     import yt
     import numpy as np
     import os
+    import pandas as pd
 
     kpc2m = 3.085677580666e19
 
@@ -441,79 +442,46 @@ def plot_BH(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix,
         print('%s BH particles' % len(BH_pos))
 
         if len(BH_pos) > 0:
-            BH_pos = caesar.utils.rotator(BH_pos, galaxy.rotation_angles[
-                                            'ALPHA'], galaxy.rotation_angles['BETA'])
-            BH_posx, BH_posy, BH_posz = BH_pos[
-                :, 0].d, BH_pos[:, 1].d, BH_pos[:, 2].d
-
-            BH_vel = sphere['PartType5', 'Velocities'].in_cgs() / 1e5
-            BH_vel = caesar.utils.rotator(BH_vel, galaxy.rotation_angles[
-                                            'ALPHA'], galaxy.rotation_angles['BETA'])
-            BH_velx, BH_vely, BH_velz = BH_vel[
-                :, 0].d, BH_vel[:, 1].d, BH_vel[:, 2].d
-
+            # BH mass
+            # which grows through accretion and mergers w/ other BHs
             BH_m = sphere['PartType5', 'BH_Mass'].in_units('Msun')
+            # dynamical mass, which enters into gravity calculation
             BH_m2 = sphere['PartType5', 'Masses'].in_units('Msun')
             print BH_m
-            print BH_m2
             BH_mdot = sphere['PartType5', 'BH_Mdot']
             print BH_mdot
 
-            import matplotlib.pyplot as plt
-            # projection plot
-            plt.close('all')
+            # the one that actually matters is the most massive BH particle
+            idx = np.where(BH_m == BH_m.max())
+            BH_m = BH_m[idx]
+            BH_mdot = BH_mdot[idx]
 
-            savepath = 'plots/sims/'
-            if not os.path.exists(savepath):
-                os.makedirs(savepath)
+            print BH_m, BH_mdot
 
-            p = yt.ParticleProjectionPlot(ds, 0, [('PartType5', 'BH_Mdot')],
-                                  center=sphere.center.value,
-                                  width=(1.5, 'kpc'))
-            filename = 'z' + '{:.2f}'.format(float(zred)) + '_' + galname + '_BH_Mdot_projection.pdf'
-            p.save(os.path.join(savepath, filename))
+            savepath = d_data + 'particle_data/sim_data/'
+            assert os.path.exists(savepath)
 
+            simbh = pd.DataFrame({'mBH_Msun': BH_m,
+                                    'mdot': BH_mdot})
+            simbh.to_pickle(d_data + 'particle_data/sim_data/z' +
+                             '{:.2f}'.format(float(zred)) + '_' + galname + '_sim.bh')
 
-            p = yt.ParticleProjectionPlot(ds, 0, [('PartType5', 'BH_Mass')],
-                                  center=sphere.center.value,
-                                  width=(1.5, 'kpc'))
-            filename = 'z' + '{:.2f}'.format(float(zred)) + '_' + galname + '_BH_BH_Mass_projection.pdf'
-            p.save(os.path.join(savepath, filename))
+    return BH_m, BH_mdot
 
 
+def fetch_ss_from_closest_redshift(redshift, redshiftFile):
+    """
+    Given redshift, fetch the closest snapshot number
+    """
+    import numpy as np
 
-            p = yt.ParticlePlot(ds, 'particle_position_x', 'particle_position_y', ('PartType5', 'BH_Mdot'),
-                                  center=sphere.center.value,
-                                  width=(1.5, 'kpc'))
-            filename = 'z' + '{:.2f}'.format(float(zred)) + '_' + galname + '_BH_Mdot.pdf'
-            p.save(os.path.join(savepath, filename))
+    _, zs_table, snaps_table = np.loadtxt(redshiftFile, unpack=True)
 
-
-            p = yt.ParticlePlot(ds, 'particle_position_x', 'particle_position_y', ('PartType5', 'BH_Mass'),
-                                  center=sphere.center.value,
-                                  width=(1.5, 'kpc'))
-            p.set_unit('particle_mass', 'Msun')
-
-            filename = 'z' + '{:.2f}'.format(float(zred)) + '_' + galname + '_BH_BH_Mass.pdf'
-            p.save(os.path.join(savepath, filename))
-
-
-            p = yt.ParticlePlot(ds, 'particle_position_x', 'particle_position_y', ('PartType5', 'Masses'),
-                                  center=sphere.center.value,
-                                  width=(1.5, 'kpc'))
-
-            filename = 'z' + '{:.2f}'.format(float(zred)) + '_' + galname + '_BH_Masses.pdf'
-            p.save(os.path.join(savepath, filename))
-
-    return None
-
+    snapshotNum = np.argmin(abs(zs_table - redshift))
+    return snapshotNum
 
 
 if __name__ == '__main__':
-
-    snapRange = [150, 151]       # snaptable
-    zCloudy = 0
-    d_data = '/home/dleung/Downloads/SIGAME_dev/sigame/temp/z' + str(int(zCloudy)) + '_data_files/'  #z0
 
     raw_sim_dir = '/disk01/rad/sim/m25n256/s48/'
     raw_sim_name_prefix = 'snap_m25n256_'
@@ -521,12 +489,16 @@ if __name__ == '__main__':
     name_prefix = 'm25n256_'
     redshiftFile = '/home/rad/gizmo-extra/outputs_boxspace50.info'
 
+    snapRange = [150, 151]       # snaptable
+    zCloudy = 0
+    d_data = '/home/dleung/Downloads/SIGAME_dev/sigame/temp/z' + str(int(zCloudy)) + '_data_files/'  #z0
+
     Nhalo = 2  # 10
     Ngalaxies = 2    # 20
 
     ggg = select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Nhalo, Ngalaxies)
 
-    xx, yy = simba_to_pd(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, zCloudy, plotgas=False)
+    # xx, yy = simba_to_pd(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, zCloudy, plotgas=False)
 
-    plot_BH(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile)
+    fetch_BH(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile)
 
