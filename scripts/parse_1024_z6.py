@@ -39,8 +39,7 @@ d_data = '/home/dleung/Downloads/SIGAME_dev/sigame/temp/z' + str(int(zCloudy)) +
 with open('ggg.pkl', 'r') as f:
     ggg = pickle.load(f)
 
-
-galnames, zred = simba_to_pd(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, zCloudy, plotgas=False)
+galnames, zred = simba_to_pd(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, zCloudy)
 
 _, _ = pd_bookkeeping(galnames, zred)
 
