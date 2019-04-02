@@ -17,12 +17,9 @@ caesar_dir = '/disk01/rad/sim/m25n1024/s50/Groups/'
 name_prefix = 'm25n1024_'
 redshiftFile = '/home/rad/gizmo-extra/outputs_boxspace50.info'
 
-snapRange = [36, 150]    # don't put 036
+snapRange = [36]    # don't put 036
 zCloudy = 6
-
-dd_data = '/home/dleung/Downloads/SIGAME_dev/sigame/temp/z' + str(int(zCloudy)) + '_data_files/'
-
-multiprocessing = True
+d_data = '/home/dleung/Downloads/SIGAME_dev/sigame/temp/z' + str(int(zCloudy)) + '_data_files/'
 
 # this doesn't affect ouput, just for inspection
 # Nhalo = 10
@@ -35,36 +32,55 @@ multiprocessing = True
 
 # ggg = select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Ngalaxies)
 
-if multiprocessing:
-    # save output to .txt for multiprocessing
-    prefix = raw_sim_dir[raw_sim_dir.find('sim/')+4:-1].replace('/', '_')
-    save_SFgal_txt(ggg, prefix)
-    split_by_snap()
+# # for debugging, I don't want to have to run select_SFgal_from_simba() again and again
+# with open('ggg.pkl', 'w') as f:
+#     pickle.dump([ggg], f)
 
-    # multiprocessing
-    for niter, iii in enumerate(snapRange):
-        if niter == 0:
-            # multiprocessing
-            gg, zz = simba_to_pd_multiprocessing(4,  raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, dd_data, snap=iii)
-        else:
-            for cc in gg:
-                gg.append(cc)
-            for cc in zz:
-                zz.append(cc)
-    galnames, redshifts = pd_bookkeeping(gg, zz, zCloudy)
+with open('ggg.pkl', 'r') as f:
+    ggg = pickle.load(f)
 
-else:
-    # # save output ggg to pickle file for debugging purpose,
-    # I don't want to have to run select_SFgal_from_simba() again and again
-    # with open('ggg.pkl', 'w') s f:
-    #     pickle.dump([ggg], f)
+galnames, zred = simba_to_pd(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data)
 
-    with open('ggg.pkl', 'r') as f:
-        ggg = pickle.load(f)
-
-    galnames, zred = simba_to_pd(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, dd_data)
-
-
+_, _ = pd_bookkeeping(galnames, zred, zCloudy)
 
 
 fetch_BH(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile)
+
+
+
+
+obj, ds = define_ds(snap, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile)
+
+
+def define_ds(snap, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, verbose=False):
+
+    """
+
+    """
+
+    import caesar
+    import yt
+    import numpy as np
+    import os
+
+    _, zs_table, snaps_table = np.loadtxt(redshiftFile, unpack=True)
+
+    infile = caesar_dir + name_prefix + '{:0>3}'.format(int(snap)) + \
+        '.hdf5'
+    print("Loading Ceasar file: {}").format(infile)
+    obj = caesar.load(infile)
+
+    rawSim = raw_sim_dir + raw_sim_name_prefix + \
+        '{:>03}'.format(int(snap)) + '.hdf5'
+
+    ds = yt.load(rawSim, over_refine_factor=1, index_ptype="all")
+
+    if verbose:
+        print('Info for this snapshot:')
+        print('Simulation type: ' + ds.dataset_type)
+        for key in ds.parameters.keys():
+            print('%s = %s' % (key, ds.parameters[key]))
+
+    zred = '{:.3f}'.format(zs_table[snaps_table == snap][0])
+
+    return obj, ds, float(zred)
