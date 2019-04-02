@@ -399,11 +399,11 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
                 simgas.to_pickle(simgas_path)
                 simstar.to_pickle(simstar_path)
                 simdm.to_pickle(simdm_path)
-            else:
-                print("Skipping... Already extracted...")
+        else:
+            print("Skipping... Already extracted...")
 
-            galnames_selected.append(galname)
-            zreds_selected = np.append(zreds_selected, float(zred))
+        galnames_selected.append(galname)
+        zreds_selected = np.append(zreds_selected, float(zred))
 
     return galnames_selected, zreds_selected
 
