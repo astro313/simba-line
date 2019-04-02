@@ -549,18 +549,3 @@ if __name__ == '__main__':
     xx, yy = simba_to_pd(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data)
 
     fetch_BH(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile)
-
-    # save output to .txt for multiprocessing
-    prefix = raw_sim_dir[raw_sim_dir.find('sim/')+4:-1].replace('/', '_')
-    save_SFgal_txt(ggg, prefix)
-
-    for niter, iii in enumerate(nsnapRange):
-        if niter == 0:
-            # multiprocessing
-            gg, zz = test(4,  raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, snap=iii)
-        else:
-            for cc in gg:
-                gg.append(cc)
-            for cc in zz:
-                zz.append(cc)
-    _, _ = pd_bookkeeping(gg, zz, zCloudy)
