@@ -87,7 +87,7 @@ def select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_p
         infile = caesar_dir + name_prefix + '{:0>3}'.format(int(sss)) + \
             '.hdf5'
         print("Loading Ceasar file: {}").format(infile)
-        obj = caesar.load(infile)
+        obj = caesar.load(infile)    # # LoadHalo=False
 
         print("\nSelecing {} Galaxies with the highest SFRs across all halos in this snapshot, but you may want to galaxies based on different criteria.").format(Ngalaxies)
         obj.galaxies.sort(key=lambda x: x.sfr, reverse=True)
@@ -115,6 +115,18 @@ def select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_p
     return galnames
 
 
+def print_ds_info(h, obj, ds):
+    boxsize = (obj.simulation.boxsize*h).d       # boxsize=readheader(snap,'boxsize')
+    # galaxy mass resolution limit: 32 gas particle masses
+    mlim = 32*obj.simulation.critical_density.value*obj.simulation.boxsize.value**3*obj.simulation.omega_baryon/obj.simulation.effective_resolution**3
+    print("Box size: {:} Mpc/h").format(boxsize/1.e3)
+    print("Galaxy mass lower bound/mass reolution limit (32 particles masses): {:} ").format(mlim)
+    print('Info for this snapshot:')
+    print('Simulation type: ' + ds.dataset_type)
+    for key in ds.parameters.keys():
+        print('%s = %s' % (key, ds.parameters[key]))
+
+
 def define_ds(snap, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, verbose=False):
 
     """
@@ -125,30 +137,31 @@ def define_ds(snap, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, r
     import yt
     import numpy as np
     import os
+    import pygad as pg
 
     _, zs_table, snaps_table = np.loadtxt(redshiftFile, unpack=True)
 
     infile = caesar_dir + name_prefix + '{:0>3}'.format(int(snap)) + \
         '.hdf5'
     print("Loading Ceasar file: {}").format(infile)
-    obj = caesar.load(infile)
+    obj = caesar.load(infile)         # LoadHalo=False
 
     rawSim = raw_sim_dir + raw_sim_name_prefix + \
         '{:>03}'.format(int(snap)) + '.hdf5'
 
     ds = yt.load(rawSim, over_refine_factor=1, index_ptype="all")
 
+    s = pg.Snap(raw_sim_dir + raw_sim_name_prefix + '{:0>3}'.format(int(snap)) + '.hdf5')
+    h = s.cosmology.h()    # obj.simulation.hubble_constant
+
     if verbose:
-        print('Info for this snapshot:')
-        print('Simulation type: ' + ds.dataset_type)
-        for key in ds.parameters.keys():
-            print('%s = %s' % (key, ds.parameters[key]))
+        print_ds_info(h, obj, ds)
 
     zred = '{:.3f}'.format(zs_table[snaps_table == snap][0])
-    return obj, ds, float(zred)
+    return s, h, obj, ds, float(zred)
 
 
-def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, verbose=False, debug=False):
+def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, plotgas=False, R_max=20.0, verbose=False, debug=False):
 
     """
 
@@ -170,6 +183,10 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
         where to look for the redshift info for this particular set of snapshots
     dd_data: str
         directory location to save dataframe files
+    plotgas: bool
+        whether or not to plot gas distribution of galaxy. Uesful for e.g., looking at the galaxy position and see if it might be the COM of two overlapping galaxies - see Romeel's email on Apr 4th, 2019.
+    R_max: float
+        physical kpc for projection plot
     Returns
     -------
     galnames_selected: list of string
@@ -207,11 +224,11 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
 
         if num == 0:
             snap_hold = snap
-            obj, ds, zred = define_ds(snap, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile)
+            s, h, obj, ds, zred = define_ds(snap, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile)
 
         else:
             if snap != snap_hold:
-                obj, ds, zred = define_ds(snap, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile)
+                s, h, obj, ds, zred = define_ds(snap, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile)
                 snap_hold = snap
 
         print('\nNow looking at galaxy # %s with parent halo ID %s in snapshot %s at z = %s' % (
@@ -234,9 +251,10 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
 
             galaxy = obj.galaxies[GAL]
             # Get location and radius for each galaxy belonging to this haloID:
-            loc = galaxy.pos
+            loc = galaxy.pos            # .in_units('unitary')
             R_gal = galaxy.radius       # kpccm, i.e., co-moving
-            print('Cut out a sphere with radius %s ' % R_gal)
+            # print(galaxy.radii)
+            print('Cut out a sphere with radius %s, %s' % (R_gal, R_gal.in_units('kpc')))
             sphere = ds.sphere(loc, R_gal)
 
             print('Extracting all gas particle properties...')
@@ -288,6 +306,7 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
                     'kpc')       # Tk
                 # Msun/yr
                 gas_SFR = sphere['PartType0', 'StarFormationRate']
+                # gas_SFR = galaxy.sfr
                 gas_Z = sphere['PartType0', 'Metallicity_00'].d / \
                     0.0134               # from RD
                 gas_a_He = sphere['PartType0', 'Metallicity_01'].d
@@ -316,6 +335,7 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
                     :, 0].d, star_vel[:, 1].d, star_vel[:, 2].d
 
                 star_m = sphere['PartType4', 'Masses'].in_units('Msun')
+                # star_m = galaxy.masses['stellar']
                 star_a_C = sphere['PartType4', 'Metallicity_02'].d
                 star_a_O = sphere['PartType4', 'Metallicity_04'].d
                 star_a_Si = sphere['PartType4', 'Metallicity_07'].d
@@ -372,7 +392,43 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
 
                 if len(simstar) == 0 or len(simgas) == 0:
                     print simgas['SFR']
+
+                    import matplotlib.pyplot as plt
+                    from mpl_toolkits.axes_grid1 import AxesGrid
+                    # projection plot
+                    plt.close('all')
+
+                    savepath = 'plots/sims/'
+                    if not os.path.exists(savepath):
+                        os.makedirs(savepath)
+                    ppp = yt.ProjectionPlot(ds, 0, [('gas', 'density')],
+                                         center=sphere.center.value,
+                                         width=(R_max, 'kpc'),
+                                           # center='c',
+                                         weight_field='density')
+                    try:
+                        ppp.annotate_timestamp(corner='upper_left',
+                                            redshift=True,
+                                            time=False,
+                                            draw_inset_box=True)
+                        #p.annotate_scale(corner='upper_right')
+                        ppp.annotate_particles((R_max, 'kpc'),
+                                              p_size=20,
+                                              ptype='PartType5',
+                                              minimum_mass=1.e7)
+                    except:
+                        pass
+
+                    filename = 'z' + '{:.2f}'.format(float(zred)) + '_' + galname + '_gas.pdf'
+                    ppp.save(os.path.join(savepath, filename))
+
+                    print("Not saving this galaxy {:} because it has no stellar mass...").format(galname)
+                    continue
+
+                if len(simstar) == 0 or len(simgas) == 0:
+                    print("we should never enter here....")
                     import pdb; pdb.set_trace()
+
                 # Center in position and velocity
                 simgas, simstar, simdm = center_cut_galaxy(
                     simgas, simstar, simdm, plot=False)
@@ -399,6 +455,34 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
                 simgas.to_pickle(simgas_path)
                 simstar.to_pickle(simstar_path)
                 simdm.to_pickle(simdm_path)
+
+                if plotgas:
+                    import matplotlib.pyplot as plt
+                    from mpl_toolkits.axes_grid1 import AxesGrid
+                    # projection plot
+                    plt.close('all')
+
+                    savepath = 'plots/sims/'
+                    if not os.path.exists(savepath):
+                        os.makedirs(savepath)
+                    p = yt.ProjectionPlot(ds, 0, 'density',
+                                         center=sphere.center.value,
+                                         width=(R_max, 'kpc'),
+                                           # center='c',
+                                         weight_field='density')
+
+                    try:
+                        p.annotate_timestamp(corner='upper_left', redshift=True, time=False, draw_inset_box=True)
+                        #p.annotate_scale(corner='upper_right')
+                        p.annotate_particles((R_max, 'kpc'),
+                                              p_size=20,
+                                              ptype='PartType5',
+                                              minimum_mass=1.e7)
+                    except:
+                        continue
+
+                    filename = 'z' + '{:.2f}'.format(float(zred)) + '_' + galname + '_gas.pdf'
+                    p.save(os.path.join(savepath, filename))
         else:
             print("Skipping... Already extracted...")
 
@@ -438,6 +522,10 @@ def fetch_BH(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix
 
     kpc2m = 3.085677580666e19
 
+    print("need to restructure...")
+    import pdb; pdb.set_trace()
+
+
     # Save the names and redshift for the galaxies that we finally decide to save in DataFrames:
     galnames_selected   =   []
     zreds_selected      =   np.array([])
@@ -449,17 +537,11 @@ def fetch_BH(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix
         infile = caesar_dir + name_prefix + '{:0>3}'.format(int(snap)) + \
             '.hdf5'
         print("Loading Ceasar file: {}").format(infile)
-        obj = caesar.load(infile)
+        obj = caesar.load(infile)     # LoadHalo=False
 
         rawSim = raw_sim_dir + raw_sim_name_prefix + \
             '{:>03}'.format(int(snap)) + '.hdf5'
         ds = yt.load(rawSim, over_refine_factor=1, index_ptype="all")
-
-        if verbose:
-            print('Info for this snapshot:')
-            print('Simulation type: ' + ds.dataset_type)
-            for key in ds.parameters.keys():
-                print('%s = %s' % (key, ds.parameters[key]))
 
         zred = '{:.3f}'.format(zs_table[snaps_table == snap][0])
         print('\nNow looking at galaxy # %s with parent halo ID %s in snapshot %s at z = %s' % (
@@ -472,10 +554,10 @@ def fetch_BH(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix
         galaxy = obj.galaxies[GAL]
 
         # Get location and radius for each galaxy belonging to this haloID:
-        loc = galaxy.pos
+        loc = galaxy.pos            # .in_units('unitary')
         R_gal = galaxy.radius       # kpccm, i.e., co-moving
-        print('Cut out a sphere with radius %s ' % R_gal)
-        sphere = ds.sphere(loc, R_gal)
+        print('Cut out a sphere with radius %s, %s' % (R_gal, R_gal.in_units('kpc')))
+        sphere = ds.sphere(loc, R_gal)     # should the 'loc' here be code unit instead? i.e., loc = galaxy.pos * h
 
         if debug:
             print("List all stuff inside the raw sim .hdf5")
