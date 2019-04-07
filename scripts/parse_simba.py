@@ -257,9 +257,11 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
             print('Cut out a sphere with radius %s, %s' % (R_gal, R_gal.in_units('kpc')))
             sphere = ds.sphere(loc, R_gal)
 
-            print('Extracting all gas particle properties...')
             gas_pos = sphere['PartType0', 'Coordinates'].in_units('kpc')
             print('%s SPH particles' % len(gas_pos))
+
+            star_pos_all = sphere['PartType4', 'Coordinates'].in_units('kpc')
+            print('%s Star particles' % len(star_pos_all))
 
             if debug:
                 print("List all stuff inside the raw sim .hdf5")
@@ -268,7 +270,8 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
                 print("")
                 print ds.field_list
 
-            if len(gas_pos) > 0:
+            if len(gas_pos) > 0 and len(star_pos) > 0:
+                print('Extracting all gas particle properties...')
                 gas_pos = gas_pos - loc
                 gas_pos = caesar.utils.rotator(gas_pos,
                                                galaxy.rotation_angles['ALPHA'],
@@ -321,7 +324,6 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
                 gas_a_Fe = sphere['PartType0', 'Metallicity_10'].d
 
                 print('Extracting all star particle properties...')
-                star_pos_all = sphere['PartType4', 'Coordinates'].in_units('kpc')
                 star_pos = star_pos_all - loc
                 star_pos = caesar.utils.rotator(star_pos, galaxy.rotation_angles[
                                                 'ALPHA'], galaxy.rotation_angles['BETA'])
@@ -374,6 +376,40 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
                 dm_velx, dm_vely, dm_velz = dm_vel[:, 0].d, dm_vel[:, 1].d, dm_vel[:, 2].d
                 dm_m = sphere['PartType1', 'Masses'].in_units('Msun')
 
+
+                print('Extracting all BH particle properties...')
+                BH_pos = sphere['PartType5', 'Coordinates'].in_units('kpc') - loc
+                print('%s BH particles' % len(BH_pos))
+
+                if len(BH_pos) > 0:
+                    BH_pos = caesar.utils.rotator(BH_pos,
+                                                   galaxy.rotation_angles['ALPHA'],
+                                                   galaxy.rotation_angles['BETA'])
+                    BH_posx, BH_posy, BH_posz = BH_pos[
+                        :, 0].d, BH_pos[:, 1].d, BH_pos[:, 2].d
+
+                    # BH mass
+                    # which grows through accretion and mergers w/ other BHs
+                    BH_m = sphere['PartType5', 'BH_Mass'].in_units('Msun')
+
+                    # dynamical mass, which enters into gravity calculation
+                    BH_m2 = sphere['PartType5', 'Masses'].in_units('Msun')
+
+                    BH_mdot = sphere['PartType5', 'BH_Mdot']
+
+                    # the one that actually matters is the most massive BH particle
+                    idx = np.where(BH_m == BH_m.max())
+                    BH_m = BH_m[idx]
+                    BH_mdot = BH_mdot[idx]
+
+                    print BH_m, BH_mdot
+
+                    simbh = pd.DataFrame({'mBH_Msun': BH_m,
+                                            'mdot': BH_mdot})
+
+                    simbh.to_pickle(d_data + 'particle_data/sim_data/z' +
+                                     '{:.2f}'.format(float(zred)) + '_' + galname + '_sim.bh')
+
                 # Put into dataframes:
                 simgas = pd.DataFrame({'x': gas_posx, 'y': gas_posy, 'z': gas_posz,
                                        'vx': gas_velx, 'vy': gas_vely, 'vz': gas_velz,
@@ -390,7 +426,15 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
                 simdm = pd.DataFrame({'x': dm_posx, 'y': dm_posy, 'z': dm_posz,
                                       'vx': dm_velx, 'vy': dm_vely, 'vz': dm_velz, 'm': dm_m})
 
-                if len(simstar) == 0 or len(simgas) == 0:
+            elif len(simstar) == 0 or len(simgas) == 0:
+
+                if len(simstar) == 0:
+                    print("Not saving this galaxy {:} because it has no stellar mass...").format(galname)
+                elif len(simgas) == 0:
+                    print("Not saving this galaxy {:} because it has no gas mass...").format(galname)
+
+                if debug:
+                    print "SFR: "
                     print simgas['SFR']
 
                     import matplotlib.pyplot as plt
@@ -401,6 +445,8 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
                     savepath = 'plots/sims/'
                     if not os.path.exists(savepath):
                         os.makedirs(savepath)
+
+                    print "Plotting gas particles..."
                     ppp = yt.ProjectionPlot(ds, 0, [('gas', 'density')],
                                          center=sphere.center.value,
                                          width=(R_max, 'kpc'),
@@ -422,12 +468,6 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
                     filename = 'z' + '{:.2f}'.format(float(zred)) + '_' + galname + '_gas.pdf'
                     ppp.save(os.path.join(savepath, filename))
 
-                    print("Not saving this galaxy {:} because it has no stellar mass...").format(galname)
-                    continue
-
-                if len(simstar) == 0 or len(simgas) == 0:
-                    print("we should never enter here....")
-                    import pdb; pdb.set_trace()
 
                 # Center in position and velocity
                 simgas, simstar, simdm = center_cut_galaxy(
@@ -465,21 +505,23 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
                     savepath = 'plots/sims/'
                     if not os.path.exists(savepath):
                         os.makedirs(savepath)
-                    p = yt.ProjectionPlot(ds, 0, 'density',
+                    ppp = yt.ProjectionPlot(ds, 0, [('gas', 'density')],
                                          center=sphere.center.value,
                                          width=(R_max, 'kpc'),
                                            # center='c',
                                          weight_field='density')
-
                     try:
-                        p.annotate_timestamp(corner='upper_left', redshift=True, time=False, draw_inset_box=True)
+                        ppp.annotate_timestamp(corner='upper_left',
+                                            redshift=True,
+                                            time=False,
+                                            draw_inset_box=True)
                         #p.annotate_scale(corner='upper_right')
-                        p.annotate_particles((R_max, 'kpc'),
+                        ppp.annotate_particles((R_max, 'kpc'),
                                               p_size=20,
                                               ptype='PartType5',
                                               minimum_mass=1.e7)
                     except:
-                        continue
+                        pass
 
                     filename = 'z' + '{:.2f}'.format(float(zred)) + '_' + galname + '_gas.pdf'
                     p.save(os.path.join(savepath, filename))
@@ -504,98 +546,6 @@ def pd_bookkeeping(galnames_selected, zreds_selected, zCloudy):
     print('Number of galaxies in entire sample extracted from Simba data to : {}'.format(str(len(galnames_selected))))
 
     return galnames_selected, zreds_selected
-
-
-def fetch_BH(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, verbose=False, debug=False):
-
-    """
-
-    get BH particles info.
-
-    """
-
-    import caesar
-    import yt
-    import numpy as np
-    import os
-    import pandas as pd
-
-    kpc2m = 3.085677580666e19
-
-    print("need to restructure...")
-    import pdb; pdb.set_trace()
-
-
-    # Save the names and redshift for the galaxies that we finally decide to save in DataFrames:
-    galnames_selected   =   []
-    zreds_selected      =   np.array([])
-
-    _, zs_table, snaps_table = np.loadtxt(redshiftFile, unpack=True)
-
-    for halo, snap, GAL, sfr in zip(galnames['halo'].values, galnames['snap'].values, galnames['GAL'].values, galnames['SFR'].values):
-
-        infile = caesar_dir + name_prefix + '{:0>3}'.format(int(snap)) + \
-            '.hdf5'
-        print("Loading Ceasar file: {}").format(infile)
-        obj = caesar.load(infile)     # LoadHalo=False
-
-        rawSim = raw_sim_dir + raw_sim_name_prefix + \
-            '{:>03}'.format(int(snap)) + '.hdf5'
-        ds = yt.load(rawSim, over_refine_factor=1, index_ptype="all")
-
-        zred = '{:.3f}'.format(zs_table[snaps_table == snap][0])
-        print('\nNow looking at galaxy # %s with parent halo ID %s in snapshot %s at z = %s' % (
-            int(GAL), int(halo), int(snap), zred))
-
-        print('Creating galaxy name:')
-        galname = 'h' + str(int(halo)) + '_s' + \
-            str(int(snap)) + '_G' + str(int(GAL))
-        print(galname)
-        galaxy = obj.galaxies[GAL]
-
-        # Get location and radius for each galaxy belonging to this haloID:
-        loc = galaxy.pos            # .in_units('unitary')
-        R_gal = galaxy.radius       # kpccm, i.e., co-moving
-        print('Cut out a sphere with radius %s, %s' % (R_gal, R_gal.in_units('kpc')))
-        sphere = ds.sphere(loc, R_gal)     # should the 'loc' here be code unit instead? i.e., loc = galaxy.pos * h
-
-        if debug:
-            print("List all stuff inside the raw sim .hdf5")
-            os.system('h5ls -r ' + rawSim)
-
-            print("")
-            print ds.field_list
-
-        print('Extracting all BH particle properties...')
-        BH_pos = sphere['PartType5', 'Coordinates'].in_units('kpc') - loc
-        print('%s BH particles' % len(BH_pos))
-
-        if len(BH_pos) > 0:
-            # BH mass
-            # which grows through accretion and mergers w/ other BHs
-            BH_m = sphere['PartType5', 'BH_Mass'].in_units('Msun')
-            # dynamical mass, which enters into gravity calculation
-            BH_m2 = sphere['PartType5', 'Masses'].in_units('Msun')
-            print BH_m
-            BH_mdot = sphere['PartType5', 'BH_Mdot']
-            print BH_mdot
-
-            # the one that actually matters is the most massive BH particle
-            idx = np.where(BH_m == BH_m.max())
-            BH_m = BH_m[idx]
-            BH_mdot = BH_mdot[idx]
-
-            print BH_m, BH_mdot
-
-            savepath = d_data + 'particle_data/sim_data/'
-            assert os.path.exists(savepath)
-
-            simbh = pd.DataFrame({'mBH_Msun': BH_m,
-                                    'mdot': BH_mdot})
-            simbh.to_pickle(d_data + 'particle_data/sim_data/z' +
-                             '{:.2f}'.format(float(zred)) + '_' + galname + '_sim.bh')
-
-    return BH_m, BH_mdot
 
 
 def fetch_ss_from_closest_redshift(redshift, redshiftFile):
@@ -630,4 +580,3 @@ if __name__ == '__main__':
 
     xx, yy = simba_to_pd(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data)
 
-    fetch_BH(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile)
