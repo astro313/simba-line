@@ -53,5 +53,3 @@ galnames, zred = simba_to_pd(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, 
 
 _, _ = pd_bookkeeping(galnames, zred, zCloudy)
 
-fetch_BH(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile)
-
