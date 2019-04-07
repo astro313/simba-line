@@ -270,7 +270,7 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
                 print("")
                 print ds.field_list
 
-            if len(gas_pos) > 0 and len(star_pos) > 0:
+            if len(gas_pos) > 0 and len(star_pos_all) > 0:
                 print('Extracting all gas particle properties...')
                 gas_pos = gas_pos - loc
                 gas_pos = caesar.utils.rotator(gas_pos,
@@ -426,49 +426,6 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
                 simdm = pd.DataFrame({'x': dm_posx, 'y': dm_posy, 'z': dm_posz,
                                       'vx': dm_velx, 'vy': dm_vely, 'vz': dm_velz, 'm': dm_m})
 
-            elif len(simstar) == 0 or len(simgas) == 0:
-
-                if len(simstar) == 0:
-                    print("Not saving this galaxy {:} because it has no stellar mass...").format(galname)
-                elif len(simgas) == 0:
-                    print("Not saving this galaxy {:} because it has no gas mass...").format(galname)
-
-                if debug:
-                    print "SFR: "
-                    print simgas['SFR']
-
-                    import matplotlib.pyplot as plt
-                    from mpl_toolkits.axes_grid1 import AxesGrid
-                    # projection plot
-                    plt.close('all')
-
-                    savepath = 'plots/sims/'
-                    if not os.path.exists(savepath):
-                        os.makedirs(savepath)
-
-                    print "Plotting gas particles..."
-                    ppp = yt.ProjectionPlot(ds, 0, [('gas', 'density')],
-                                         center=sphere.center.value,
-                                         width=(R_max, 'kpc'),
-                                           # center='c',
-                                         weight_field='density')
-                    try:
-                        ppp.annotate_timestamp(corner='upper_left',
-                                            redshift=True,
-                                            time=False,
-                                            draw_inset_box=True)
-                        #p.annotate_scale(corner='upper_right')
-                        ppp.annotate_particles((R_max, 'kpc'),
-                                              p_size=20,
-                                              ptype='PartType5',
-                                              minimum_mass=1.e7)
-                    except:
-                        pass
-
-                    filename = 'z' + '{:.2f}'.format(float(zred)) + '_' + galname + '_gas.pdf'
-                    ppp.save(os.path.join(savepath, filename))
-
-
                 # Center in position and velocity
                 simgas, simstar, simdm = center_cut_galaxy(
                     simgas, simstar, simdm, plot=False)
@@ -525,6 +482,49 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
 
                     filename = 'z' + '{:.2f}'.format(float(zred)) + '_' + galname + '_gas.pdf'
                     p.save(os.path.join(savepath, filename))
+
+            elif len(gas_pos) == 0 and len(star_pos_all) == 0:
+
+                if len(star_pos_all) == 0:
+                    print("Not saving this galaxy {:} because it has no stellar mass...").format(galname)
+                elif len(gas_pos) == 0:
+                    print("Not saving this galaxy {:} because it has no gas mass...").format(galname)
+
+                if debug:
+                    print "SFR: "
+                    print simgas['SFR']
+
+                    import matplotlib.pyplot as plt
+                    from mpl_toolkits.axes_grid1 import AxesGrid
+                    # projection plot
+                    plt.close('all')
+
+                    savepath = 'plots/sims/'
+                    if not os.path.exists(savepath):
+                        os.makedirs(savepath)
+
+                    print "Plotting gas particles..."
+                    ppp = yt.ProjectionPlot(ds, 0, [('gas', 'density')],
+                                         center=sphere.center.value,
+                                         width=(R_max, 'kpc'),
+                                           # center='c',
+                                         weight_field='density')
+                    try:
+                        ppp.annotate_timestamp(corner='upper_left',
+                                            redshift=True,
+                                            time=False,
+                                            draw_inset_box=True)
+                        #p.annotate_scale(corner='upper_right')
+                        ppp.annotate_particles((R_max, 'kpc'),
+                                              p_size=20,
+                                              ptype='PartType5',
+                                              minimum_mass=1.e7)
+                    except:
+                        pass
+
+                    filename = 'z' + '{:.2f}'.format(float(zred)) + '_' + galname + '_gas.pdf'
+                    ppp.save(os.path.join(savepath, filename))
+
         else:
             print("Skipping... Already extracted...")
 
