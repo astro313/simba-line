@@ -89,7 +89,7 @@ def info(obj, snapFile, top=None, savetxt=False):
 
     if savetxt:
         outputFileName = snapFile[50:-5] + '_top' + str(top) + '.txt'
-        f = open(outputFileName, 'w')    # 'a'
+        f = open(outputFileName, 'w')
         f.write(output)
         f.close()
 
@@ -163,8 +163,10 @@ if __name__ == '__main__':
 
     if len(sys.argv) > 1:
         debug = sys.argv[1]
+        LoadHalo = False
     else:
         debug = False
+        LoadHalo = True
 
     snapRange = [36]    # don't put 036
     zCloudy = 6
@@ -185,7 +187,7 @@ if __name__ == '__main__':
 
     infile = caesar_dir + name_prefix + '{:0>3}'.format(int(36)) + \
                 '.hdf5'
-    obj = caesar.load(infile, LoadHalo=False)
+    obj = caesar.load(infile, LoadHalo=LoadHalo)
     snapFile = raw_sim_dir + raw_sim_name_prefix + '{:0>3}'.format(int(36)) + '.hdf5'
 
     output = info(obj, snapFile, top=None, savetxt=True)
