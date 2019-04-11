@@ -1,7 +1,6 @@
 """
 
-getting all z~6 galaxies in the 1024 sims, from the 25 cMpc/h box
-
+getting all z~6 galaxies in the 1024 sims, from the 25 cMpc/h box, but they seem to have too low SFR - so for my purpose, I maybe should look into the 50 box instead.
 
 """
 
@@ -13,6 +12,11 @@ except:
 import socket
 import os
 import sys
+
+if len(sys.argv) > 1:
+    debug = sys.argv[1]
+else:
+    debug = False
 
 snapRange = [36]    # don't put 036
 zCloudy = 6
@@ -42,14 +46,14 @@ elif 'flatironinstitute.org' or 'worker' in host:
 
 # ggg = select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Ngalaxies)
 
-# # for debugging, I don't want to have to run select_SFgal_from_simba() again and again
-# with open('ggg.pkl', 'w') as f:
-#     pickle.dump([ggg], f)
+# for debugging, I don't want to have to run select_SFgal_from_simba() again and again
+with open('ggg.pkl', 'w') as f:
+    pickle.dump([ggg], f)
 
 with open('ggg.pkl', 'r') as f:
     ggg = pickle.load(f)
 
-galnames, zred = simba_to_pd(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, plotgas=False)
+galnames, zred = simba_to_pd(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, plotgas=False, debug=debug)
 
 _, _ = pd_bookkeeping(galnames, zred, zCloudy)
 
