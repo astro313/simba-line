@@ -30,19 +30,24 @@ def info(obj, snapFile, top=None, savetxt=False):
     else:
         time = 't=%0.3f' % obj.simulation.time
 
-    output  = '\n'
+    output  = '##\n'
     output += '## Largest %d Galaxies \n' % (top)
     if hasattr(obj, 'data_file'): output += '## from: %s\n' % obj.data_file
     output += '## %d @ %s' % (nobjs, time)
-    output += '\n\n'
+    output += '##\n'
+    output += '##\n'
 
     cnt = 1
 
-    output += ' ID      Mstar     Mgas      MBH    fedd    SFR [Msun/yr]       r_baryon   r_gas      r_gas_half_mass      r_stellar    r_stellar_half_mass    Z_sfrWeighted [/Zsun]    Z_massWeighted     Z_stellar     T_gas_massWeighted    T_gas_SFRWeighted   fgas   nrho      Central\t|  Mhalo     HID\n'
-    output += ' ----------------------------------------------------------------------------------------\n'
+    output += '## ID      Mstar     Mgas      MBH    fedd    SFR [Msun/yr]       r_baryon   r_gas      r_gas_half_mass      r_stellar    r_stellar_half_mass    Z_sfrWeighted [/Zsun]    Z_massWeighted     Z_stellar     T_gas_massWeighted    T_gas_SFRWeighted   fgas   nrho      Central\t|  Mhalo     HID\n'
+    output += '## ----------------------------------------------------------------------------------------\n'
 
     h = obj.simulation.hubble_constant
     bhmdot = readsnap(snapFile, 'BH_Mdot','bndry',suppress=1)*1.e10/h/3.08568e+16*3.155e7 # in Mo/yr
+
+    # debug mbh:
+    # mmm = [g.masses['bh'] for g in obj.galaxies]
+    # mmm[:10]
 
     for ii, o in enumerate(group_list):
         phm, phid = -1, -1
@@ -52,16 +57,24 @@ def info(obj, snapFile, top=None, savetxt=False):
 
         try:
             bhmdots = [bhmdot[k] for k in o.bhlist]
-            imax = np.argmax(o.masses['bh'])
-            bm = o.masses['bh'][imax]
-
+            bm = o.masses['bh']
+            imax = np.argmax(bm)
+            try:
+                bm = bm[imax]
+                bmdot = bhmdots[imax]        # only the massive BH particle matters.
+            except:
+                bm = bm
+                bmdot = bhmdots
             frad = 0.1
             mdot_edd = 4*np.pi*6.67e-8*1.673e-24/(frad*3.e10*6.65245e-25) * bm * 3.155e7 # in Mo/yr
-            bmdot = bhmdots[imax]        # only the massive BH particle matters.
             fedd = bmdot / mdot_edd
+            fedd = fedd[0].value
         except:
             bm = 0
             fedd = 0
+
+        # print bm, fedd
+        # import pdb; pdb.set_trace()
 
         output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e   %0.3f   %0.3f  %0.3f  %0.2e  %0.2e  %0.3f  %0.2e  %s\t|  %0.2e  %d \n' % \
                   (o.GroupID, o.masses['stellar'], o.masses['gas'],
@@ -88,12 +101,13 @@ def info(obj, snapFile, top=None, savetxt=False):
     print(output)
 
     if savetxt:
+
         outputFileName = snapFile[50:-5] + '_top' + str(top) + '.txt'
         f = open(outputFileName, 'w')
         f.write(output)
         f.close()
 
-    return output
+    return output, outputFileName
 
 
 def setup_cmap(cm='magma'):    # "plasma_r"
@@ -130,17 +144,28 @@ def setup_plot():
     return cm
 
 
-def plot_info(colNumx, colNumy, inFile, logx=True, logy=True, xlabel='',
+def plot_info(colNumx, colNumy, inFile,
+              colNumz=None, zlabel='',
+              logx=True, logy=True, logz=True,
+              xlabel='',
               ylabel='',
+              ls='',
+              marker='*',
+              markersize=10,
+              legendFontSize=17,
+              cbarLabelSize=17,
               tag='',
-              saveFig=True):
+              saveFig=True, savedir='../plots/'):
     """
 
     colNumx: int
         column to read from the .txt file, used as x-axis in plotting
 
     colNumy: int
-        column to read from the .txt file, used as x-axis in plotting
+        column to read from the .txt file, used as y-axis in plotting
+
+    colNumz: int
+        column to read from the .txt file, used as color in plotting
 
     inFile: str
         name of input file to read from where we extract global properties of galaxies
@@ -148,15 +173,77 @@ def plot_info(colNumx, colNumy, inFile, logx=True, logy=True, xlabel='',
 
     """
 
+    colNumx = int(colNumx)
+    colNumy = int(colNumy)
+    xxx, yyy = np.genfromtxt(inFile, usecols=(colNumx, colNumy), unpack=True)
+
     import matplotlib.pyplot as plt
-
     cm = setup_plot()
-
     plt.close('all')
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
+    if colNumz:
+        fig.subplots_adjust(right=0.84, wspace=0.01)
+        colNumz = int(colNumz)
+        zzz = np.genfromtxt(inFile, usecols=(colNumz))
 
+        cm = plt.get_cmap()
+
+        if logz:
+            if zzz.min() == 0.0:
+                zzz += 1.e-6
+
+            c = list(np.log10(zzz))
+
+        else:
+            c = list(zzz)
+
+        cmap = matplotlib.cm.get_cmap('viridis')
+        normalize = matplotlib.colors.Normalize(vmin=min(c), vmax=max(c))
+        colors = [cmap(normalize(value)) for value in c]
+        # NUM_COLORS = len(c)
+        # ax.set_prop_cycle('color', [cm(1. * i / NUM_COLORS)
+        #                             for i in range(NUM_COLORS)])
+
+        ax.scatter(xxx, yyy, color=colors, s=markersize,
+                 marker=marker)
+
+    else:
+        ax.plot(xxx, yyy, ls=ls, markersize=markersize,
+                 marker=marker, color='k',
+                 # markeredgecolor='gray',
+                 markeredgewidth=0.5)
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    plt.minorticks_on()
+
+    if colNumz:
+        cax, _ = matplotlib.colorbar.make_axes(ax)
+        cbar = matplotlib.colorbar.ColorbarBase(cax, cmap=cmap, norm=normalize)
+
+        cbar.ax.tick_params(length=6, labelsize=legendFontSize)
+        cbar.set_label(zlabel, fontsize=cbarLabelSize)
+
+    if not saveFig:
+        plt.show(block=False)
+    else:
+        # fig.subplots_adjust(right=0.84, left=0.1, top=0.85,
+        #                     bottom=0.1, hspace=0.2,
+        #                     wspace=0.1)
+        if not os.path.isdir(savedir):
+            os.makedirs(savedir)
+
+        figName = savedir + xlabel + '_' + ylabel
+        if colNumz:
+            figName += '_' + zlabel
+        if len(tag) > 0:
+            figName += '_' + tag + '_'
+        figName += '.png'
+        plt.savefig(figName, bbox_inches='tight')
+
+    return fig, ax
 
 
 if __name__ == '__main__':
@@ -185,10 +272,20 @@ if __name__ == '__main__':
         redshiftFile = '/mnt/ceph/users/daisyleung/simba/gizmo-extra/outputs_boxspace50.info'
         d_data = '/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/z' + str(int(zCloudy)) + '_data_files/'
 
+        if 'worker' in host:
+            import matplotlib
+            matplotlib.use('Agg')
+
     infile = caesar_dir + name_prefix + '{:0>3}'.format(int(36)) + \
                 '.hdf5'
     obj = caesar.load(infile, LoadHalo=LoadHalo)
     snapFile = raw_sim_dir + raw_sim_name_prefix + '{:0>3}'.format(int(36)) + '.hdf5'
 
-    output = info(obj, snapFile, top=None, savetxt=True)
+    output, outName = info(obj, snapFile, top=None, savetxt=True)
+    savedir='../plots/' + str(outName[:outName.find('.txt')]) + '/'
+
+    fig, ax = plot_info(2, 1, inFile=outName, xlabel='Mgas', ylabel='Mstar',
+                        savedir=savedir)
+    fig, ax = plot_info(2, 1, inFile=outName, colNumz=3, xlabel='Mgas', \
+                        ylabel='Mstar', zlabel='MBH', savedir=savedir)
 
