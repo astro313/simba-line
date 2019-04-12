@@ -260,6 +260,8 @@ def plot_info(colNumx, colNumy, inFile,
     if logx:
         # ax.set_xscale('symlog')
         ax.set_xscale('log')
+        if 'sfrsd' in xlabel.lower():
+            ax.set_xlim(10**-4, 10**-0.5)
 
     if logy:
         # ax.set_yscale('symlog')
@@ -277,7 +279,7 @@ def plot_info(colNumx, colNumy, inFile,
         cbar.set_label(zlabel, fontsize=cbarLabelSize)
 
     # literature SK
-    if xlabel.lower() == "gassd" and "sfrsd" in ylabel.lower():
+    if "gassd" in xlabel.lower() and "sfrsd" in ylabel.lower():
         litpath = './literature/'
 
         x, y = [10**0.50, 10**4.0], [10**(-2.85), 10**2.1]
@@ -321,8 +323,14 @@ def plot_info(colNumx, colNumy, inFile,
         if not os.path.isdir(savedir):
             os.makedirs(savedir)
 
+        if '[' in xlabel:
+            xlabel = xlabel[:xlabel.find('[')-1]
+        if '[' in ylabel:
+            ylabel = ylabel[:ylabel.find('[')-1]
         figName = savedir + xlabel + '_' + ylabel
         if colNumz:
+            if '[' in zlabel:
+                zlabel = zlabel[:zlabel.find('[')-1]
             figName += '_' + zlabel
         if len(tag) > 0:
             figName += '_' + tag + '_'
