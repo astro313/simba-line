@@ -39,7 +39,7 @@ def info(obj, snapFile, top=None, savetxt=False):
 
     cnt = 1
 
-    output += '## ID      Mstar     Mgas      MBH    fedd    SFR [Msun/yr]      SFRSD [Msun/yr/kpc^2]    r_baryon   r_gas      r_gas_half_mass      r_stellar    r_stellar_half_mass    Z_sfrWeighted [/Zsun]    Z_massWeighted     Z_stellar     T_gas_massWeighted    T_gas_SFRWeighted   fgas   nrho      Central\t|  Mhalo     HID\n'
+    output += '## ID      Mstar     Mgas      MBH    fedd    SFR [Msun/yr]      SFRSD [Msun/yr/kpc^2]    SFRSD_r_stellar_half_mass [Msun/yr/kpc^2]    gasSD [Msun/pc^2]    r_baryon   r_gas      r_gas_half_mass      r_stellar    r_stellar_half_mass    Z_sfrWeighted [/Zsun]    Z_massWeighted [/Zsun]     Z_stellar [/Zsun]     T_gas_massWeighted    T_gas_SFRWeighted   fgas   nrho      Central\t|  Mhalo     HID\n'
     output += '## ----------------------------------------------------------------------------------------\n'
 
     h = obj.simulation.hubble_constant
@@ -76,20 +76,22 @@ def info(obj, snapFile, top=None, savetxt=False):
         # print bm, fedd
         # import pdb; pdb.set_trace()
 
-        output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e   %0.3f   %0.3f  %0.3f  %0.2e  %0.2e  %0.3f  %0.2e  %s\t|  %0.2e  %d \n' % \
+        output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e   %0.3f   %0.3f  %0.3f  %0.2e  %0.2e  %0.3f  %0.2e  %s\t|  %0.2e  %d \n' % \
                   (o.GroupID, o.masses['stellar'], o.masses['gas'],
                    bm,
                    fedd,
                    o.sfr,
                    o.sfr/np.pi/o.radii['gas']**2,
+                   o.sfr/np.pi/o.radii['stellar_half_mass']**2,
+                   o.masses['gas']/np.pi/(o.radii['gas']*1.e3)**2,
                    o.radii['baryon'],
                    o.radii['gas'],
                    o.radii['gas_half_mass'],
                    o.radii['stellar'],
                    o.radii['stellar_half_mass'],
                    o.metallicities['sfr_weighted']/0.0134,
-                   o.metallicities['mass_weighted'],
-                   o.metallicities['stellar'],
+                   o.metallicities['mass_weighted']/0.0134,
+                   o.metallicities['stellar']/0.0134,
                    o.temperatures['mass_weighted'],
                    o.temperatures['sfr_weighted'],
                    o.gas_fraction,
@@ -148,6 +150,8 @@ def setup_plot():
 def plot_info(colNumx, colNumy, inFile,
               colNumz=None, zlabel='',
               logx=True, logy=True, logz=True,
+              ythreshold=None,
+              xthreshold=None,
               xlabel='',
               ylabel='',
               ls='',
@@ -174,6 +178,8 @@ def plot_info(colNumx, colNumy, inFile,
 
     """
 
+    import matplotlib
+
     colNumx = int(colNumx)
     colNumy = int(colNumy)
     xxx, yyy = np.genfromtxt(inFile, usecols=(colNumx, colNumy), unpack=True)
@@ -184,10 +190,39 @@ def plot_info(colNumx, colNumy, inFile,
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
+    print("filter out bad points...")
+    if xlabel[0] == 'M':
+        bad = xxx == 0.0
+        xxx = xxx[~bad]
+        yyy = yyy[~bad]
+
+    if ylabel[0] == 'M':
+        bad = yyy == 0.0
+        xxx = xxx[~bad]
+        yyy = yyy[~bad]
+
+    if not ythreshold is None:
+        # select points with threshold above certain values in yaxis
+        good = yyy > ythreshold
+        yyy = yyy[good]
+        xxx = xxx[good]
+
+    if not xthreshold is None:
+        import pdb; pdb.set_trace()
+        good = xxx > xthreshold
+        yyy = yyy[good]
+        xxx = xxx[good]
+
     if colNumz:
         fig.subplots_adjust(right=0.84, wspace=0.01)
         colNumz = int(colNumz)
         zzz = np.genfromtxt(inFile, usecols=(colNumz))
+
+        if ythreshold:
+            zzz = zzz[good]
+
+        if xthreshold:
+            zzz = zzz[good]
 
         cm = plt.get_cmap()
 
@@ -216,9 +251,20 @@ def plot_info(colNumx, colNumy, inFile,
                  # markeredgecolor='gray',
                  markeredgewidth=0.5)
 
+    if logx:
+        # ax.set_xscale('symlog')
+        ax.set_xscale('log')
+
+    if logy:
+        # ax.set_yscale('symlog')
+        ax.set_yscale('log')
+
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
-    plt.minorticks_on()
+    ax.minorticks_on()
+
+    print np.log10(yyy)
+    import pdb; pdb.set_trace()
 
     if colNumz:
         cax, _ = matplotlib.colorbar.make_axes(ax)
@@ -226,6 +272,42 @@ def plot_info(colNumx, colNumy, inFile,
 
         cbar.ax.tick_params(length=6, labelsize=legendFontSize)
         cbar.set_label(zlabel, fontsize=cbarLabelSize)
+
+    # literature SK
+    if xlabel.lower() == "gassd" and "sfrsd" in ylabel.lower():
+
+        litpath = './literature/'
+
+        x, y = [10**0.50, 10**4.0], [10**(-2.85), 10**2.1]
+        ax.plot(x, y, linestyle='-', color='b',
+                linewidth=2, label="Kennicutt 1998")
+
+        # more from high-z literature
+        x0901, y0901 = np.loadtxt(
+            litpath + "J0901_KS10_points.txt", unpack=True)  # in log
+        x14011, y14011 = np.loadtxt(
+            litpath + "J14011_KSpoints2.txt", unpack=True)  # not in log
+        xrawle, yrawle = np.loadtxt(
+            litpath + "Rawle_KSpoints.txt", unpack=True, usecols=(0, 1))  # in log
+        xgn20, xgn20err, ygn20, ygn20err = np.loadtxt(
+            litpath + "Hodge_resolvedKS.txt", unpack=True)   # not in log
+        xegs, xegserr, yegs, yegserr = np.loadtxt(
+            litpath + "Genzel_KSpoints.txt", unpack=True)  # in log
+
+        ax.scatter(10**x0901, 10**y0901, label="J0901 @ z=2.26",
+                   color='red', marker='o', s=5, facecolors='none', alpha=0.6)
+        ax.scatter(x14011, y14011, label="SMM J14011 @ z=2.56",
+                   color='darkblue', marker='^', s=13, facecolors='none', alpha=0.8)
+        ax.scatter(10**xrawle, 10**yrawle, label="HLS0918 @ z=5.24",
+                   color='purple', marker='v', s=10, facecolors='none', alpha=0.8)
+        ax.errorbar(xgn20, ygn20, yerr=ygn20err, xerr=xgn20err,
+                    label="GN20 @ z=4.05",
+                    color='orange', fmt='s', markersize=4.5,
+                    markeredgewidth=0.6, mfc='none', elinewidth=0.5)
+        ax.errorbar(10**xegs, 10**yegs, yerr=yegserr, xerr=xegserr,
+                    label="EGS13011166 @ z=1.53",
+                    color='green', fmt='D', markersize=3.5,
+                    markeredgewidth=0.6, mfc='none', zorder=0.5, alpha=0.56, elinewidth=0.5)
 
     if not saveFig:
         plt.show(block=False)
@@ -244,6 +326,10 @@ def plot_info(colNumx, colNumy, inFile,
         figName += '.png'
         plt.savefig(figName, bbox_inches='tight')
 
+    return fig, ax
+
+
+def plot_literature_SK():
     return fig, ax
 
 
@@ -285,36 +371,58 @@ if __name__ == '__main__':
     output, outName = info(obj, snapFile, top=None, savetxt=True)
     savedir='../plots/' + str(outName[:outName.find('.txt')]) + '/'
 
-    fig, ax = plot_info(1, 20, inFile=outName, colNumz=17, zlabel='fgas',
-                        xlabel='Mstar', ylabel='Mhalo',
+    fig, ax = plot_info(1, 22+1, inFile=outName, colNumz=19, zlabel='fgas',
+                        xlabel='Mstar', ylabel='Mhalo', logz=False,
                         savedir=savedir)
 
     fig, ax = plot_info(2, 1, inFile=outName, colNumz=3, xlabel='Mgas', \
                         ylabel='Mstar', zlabel='MBH', savedir=savedir)
 
     fig, ax = plot_info(2, 1, inFile=outName, colNumz=5, xlabel='Mgas', \
-                        ylabel='Mstar', zlabel='SFR', savedir=savedir)
-
+                        ylabel='Mstar', zlabel='SFR', logz=False,
+                        savedir=savedir)
     # MZR:
-    fig, ax = plot_info(1, 14, inFile=outName, colNumz=12, xlabel='Mstar', \
-                    ylabel='Zstellar', zlabel='Zgas', savedir=savedir)
+    fig, ax = plot_info(1, 16, inFile=outName, colNumz=14, xlabel='Mstar', \
+                    ylabel='Zstellar',
+                    logy=False,
+                    zlabel='Zgas', logz=False,
+                    savedir=savedir)
 
-    fig, ax = plot_info(1, 12, inFile=outName, colNumz=17, xlabel='Mstar', \
-                    ylabel='Zgas', zlabel='fgas', savedir=savedir)
+    fig, ax = plot_info(1, 14, inFile=outName, colNumz=19, xlabel='Mstar', \
+                    ylabel='Zgas',
+                    logy=False,
+                    zlabel='fgas', logz=False, savedir=savedir)
 
     # FMR: SFR - Z - M*
-    fig, ax = plot_info(5, 12, inFile=outName, colNumz=1, xlabel='SFR', \
-                    ylabel='Zgas', zlabel='Mstar', savedir=savedir)
+    fig, ax = plot_info(5, 14, inFile=outName, colNumz=1, xlabel='SFR', \
+                    xthreshold=0.1,     # select SFR > 0.1
+                    logy=False,
+                    ylabel='Zgas', ythreshold=0.0,
+                    zlabel='Mstar', savedir=savedir)
 
     # SFR f_gas
-    fig, ax = plot_info(5, 17, inFile=outName, colNumz=1, xlabel='SFR', \
-                    ylabel='fgas', zlabel='Mstar', savedir=savedir)
+    fig, ax = plot_info(5, 19, inFile=outName, colNumz=1, xlabel='SFR', \
+                    xthreshold=0.1,
+                    ylabel='fgas', logy=False, zlabel='Mstar', savedir=savedir)
 
-    fig, ax = plot_info(6, 17, inFile=outName, colNumz=7, xlabel='SFRSD', \
-                    ylabel='f_gas', zlabel='R', savedir=savedir)
+    fig, ax = plot_info(6, 19, inFile=outName, colNumz=9, xlabel='SFRSD',
+                    xthreshold=0.0,
+                    ylabel='fgas', logy=False, zlabel='Rbaryon [kpc]',
+                    logz=False, savedir=savedir)
 
-    exit()
+    # SFRSD - GasSD
+    fig, ax = plot_info(6, 8, inFile=outName, colNumz=9,
+                        xlabel='SFRSD', xthreshold=0.0,
+                        ylabel='gasSD', ythreshold=0.0,
+                        zlabel='Rbaryon [kpc]',
+                        logz=False,
+                        savedir=savedir)
 
-
-
+    # SFRSD_stellar half mass R - GasSD
+    fig, ax = plot_info(7, 8, inFile=outName, colNumz=9,
+                        xlabel='SFRSDrstellarhalfmass', xthreshold=0.0,
+                        ylabel='gasSD', ythreshold=0.0,
+                        zlabel='Rbaryon [kpc]',
+                        logz=False,
+                        savedir=savedir)
 
