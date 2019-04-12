@@ -558,7 +558,7 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
 
 
 def pd_bookkeeping(galnames_selected, zreds_selected, zCloudy):
-    import cPickle
+    import cPickle, os
     models = {'galnames_unsorted': galnames_selected,
               'zreds_unsorted': zreds_selected}
     # call by global_results.py
@@ -598,13 +598,13 @@ def hack_galNames(pdPath):
     """
 
     import glob
-    gasF = glob.glob("*gas")
-    print gasF
-    import pdb; pdb.set_trace()
-    zreds_selected = [float(ii[1:6]) for ii in gasF]
+    gasF = glob.glob(pdPath + "*.gas")
+    gasF = map(os.path.basename, gasF)
+
+    zreds_selected = [float(ii[1:5]) for ii in gasF]
     print zreds_selected
 
-    galnames_selected = [ii[6:ii.find['_sim']] for ii in gasF]
+    galnames_selected = [ii[6:ii.find('_sim')] for ii in gasF]
     print galnames_selected
 
     return galnames_selected, zreds_selected
