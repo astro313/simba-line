@@ -115,7 +115,8 @@ def info(obj, snapFile, top=None, savetxt=False):
 
 def setup_cmap(cm='magma'):    # "plasma_r"
     import matplotlib.pyplot as plt
-    return plt.set_cmap(cm)
+    plt.set_cmap(cm)
+    return plt.get_cmap()
 
 
 def setup_plot():
@@ -160,6 +161,7 @@ def plot_info(colNumx, colNumy, inFile,
               legendFontSize=17,
               cbarLabelSize=17,
               tag='',
+              cmap=None,     # 'viridis'
               saveFig=True, savedir='../plots/'):
     """
 
@@ -224,8 +226,6 @@ def plot_info(colNumx, colNumy, inFile,
         if xthreshold:
             zzz = zzz[good]
 
-        cm = plt.get_cmap()
-
         if logz:
             if zzz.min() == 0.0:
                 zzz += 1.e-6
@@ -235,7 +235,10 @@ def plot_info(colNumx, colNumy, inFile,
         else:
             c = list(zzz)
 
-        cmap = matplotlib.cm.get_cmap('viridis')
+        if cmap is None:
+            cm = plt.get_cmap()
+        else:
+            cmap = matplotlib.cm.get_cmap(cmap)
         normalize = matplotlib.colors.Normalize(vmin=min(c), vmax=max(c))
         colors = [cmap(normalize(value)) for value in c]
         # NUM_COLORS = len(c)
