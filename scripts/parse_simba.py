@@ -239,6 +239,15 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
             str(int(snap)) + '_G' + str(int(GAL))
         print(galname)
 
+        galaxy = obj.galaxies[GAL]
+
+        if galaxy.masses['gas'] == 0.0 or galaxy.masses['stellar'] == 0.0:
+            # then don't bother getting any info on this galaxy
+            if galaxy.masses['gas'] == 0.0:
+                print("Don't bother with this galaxy, it has no gas mass.")
+            elif galaxy.masses['stellar'] == 0.0:
+                print("Don't bother with this galaxy, it has no stellar mass.")
+            continue
 
         simgas_path = (d_data + 'particle_data/sim_data/z' +
                              '{:.2f}').format(float(zred)) + '_' + galname + '_sim.gas'
@@ -249,11 +258,10 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
 
         if not os.path.exists(simgas_path) and not os.path.exists(simstar_path) and not os.path.exists(simdm_path):
 
-            galaxy = obj.galaxies[GAL]
             # Get location and radius for each galaxy belonging to this haloID:
             loc = galaxy.pos            # .in_units('unitary')
             R_gal = galaxy.radius       # kpccm, i.e., co-moving
-            # print(galaxy.radii)run
+            # print(galaxy.radii)
             print('Cut out a sphere with radius %s, %s' % (R_gal, R_gal.in_units('kpc')))
             sphere = ds.sphere(loc, R_gal)
 
