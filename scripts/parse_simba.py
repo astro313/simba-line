@@ -562,7 +562,7 @@ def pd_bookkeeping(galnames_selected, zreds_selected, zCloudy):
     models = {'galnames_unsorted': galnames_selected,
               'zreds_unsorted': zreds_selected}
     # call by global_results.py
-    outname = '/home/dleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals'
+    outname = '/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals'
     if os.path.exists(outname):     # make a back up copy if exist
         os.system('mv ' + outname + ' ' + outname + '.bak')
     cPickle.dump(models, open(outname, 'wb'))
@@ -597,7 +597,7 @@ def hack_galNames(pdPath):
 
     """
 
-    import glob
+    import glob, os
     gasF = glob.glob(pdPath + "*.gas")
     gasF = map(os.path.basename, gasF)
 
