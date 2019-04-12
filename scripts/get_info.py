@@ -249,13 +249,13 @@ def plot_info(colNumx, colNumy, inFile,
         #                             for i in range(NUM_COLORS)])
 
         ax.scatter(xxx, yyy, color=colors, s=markersize,
-                 marker=marker)
+                 marker=marker, label='This Work')
 
     else:
         ax.plot(xxx, yyy, ls=ls, markersize=markersize,
                  marker=marker, color='k',
                  # markeredgecolor='gray',
-                 markeredgewidth=0.5)
+                 markeredgewidth=0.5, label='This Work')
 
     if logx:
         # ax.set_xscale('symlog')
@@ -278,7 +278,6 @@ def plot_info(colNumx, colNumy, inFile,
 
     # literature SK
     if xlabel.lower() == "gassd" and "sfrsd" in ylabel.lower():
-
         litpath = './literature/'
 
         x, y = [10**0.50, 10**4.0], [10**(-2.85), 10**2.1]
@@ -311,6 +310,7 @@ def plot_info(colNumx, colNumy, inFile,
                     label="EGS13011166 @ z=1.53",
                     color='green', fmt='D', markersize=3.5,
                     markeredgewidth=0.6, mfc='none', zorder=0.5, alpha=0.56, elinewidth=0.5)
+        ax.legend(loc='best', ncol=2)
 
     if not saveFig:
         plt.show(block=False)
@@ -408,23 +408,25 @@ if __name__ == '__main__':
                     xthreshold=0.1,
                     ylabel='fgas', logy=False, zlabel='Mstar', savedir=savedir)
 
-    fig, ax = plot_info(6, 19, inFile=outName, colNumz=9, xlabel='SFRSD',
+    fig, ax = plot_info(6, 19, inFile=outName, colNumz=9,
+                    xlabel='SFRSD [Msun/pc2]',
                     xthreshold=0.0,
                     ylabel='fgas', logy=False, zlabel='Rbaryon [kpc]',
                     logz=False, savedir=savedir)
 
     # SFRSD - GasSD
-    fig, ax = plot_info(6, 8, inFile=outName, colNumz=9,
-                        xlabel='SFRSD', xthreshold=0.0,
-                        ylabel='gasSD', ythreshold=0.0,
+    fig, ax = plot_info(8, 6, inFile=outName, colNumz=9,
+                        xlabel='gasSD [Msun/pc2]', xthreshold=0.0,
+                        ylabel='SFRSD [Msun/yr/kpc2]', ythreshold=0.0,
                         zlabel='Rbaryon [kpc]',
                         logz=False,
                         savedir=savedir)
 
     # SFRSD_stellar half mass R - GasSD
-    fig, ax = plot_info(7, 8, inFile=outName, colNumz=9,
-                        xlabel='SFRSDrstellarhalfmass', xthreshold=0.0,
-                        ylabel='gasSD', ythreshold=0.0,
+    fig, ax = plot_info(8, 7, inFile=outName, colNumz=9,
+                        xlabel='gasSD [Msun/pc2]', xthreshold=0.0,
+                        ylabel='SFRSDrstellarhalfmass [Msun/yr/kpc2]',
+                        ythreshold=0.0,
                         zlabel='Rbaryon [kpc]',
                         logz=False,
                         savedir=savedir)
