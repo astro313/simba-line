@@ -39,7 +39,7 @@ def info(obj, snapFile, top=None, savetxt=False):
 
     cnt = 1
 
-    output += '## ID      Mstar     Mgas      MBH    fedd    SFR [Msun/yr]       r_baryon   r_gas      r_gas_half_mass      r_stellar    r_stellar_half_mass    Z_sfrWeighted [/Zsun]    Z_massWeighted     Z_stellar     T_gas_massWeighted    T_gas_SFRWeighted   fgas   nrho      Central\t|  Mhalo     HID\n'
+    output += '## ID      Mstar     Mgas      MBH    fedd    SFR [Msun/yr]      SFRSD [Msun/yr/kpc^2]    r_baryon   r_gas      r_gas_half_mass      r_stellar    r_stellar_half_mass    Z_sfrWeighted [/Zsun]    Z_massWeighted     Z_stellar     T_gas_massWeighted    T_gas_SFRWeighted   fgas   nrho      Central\t|  Mhalo     HID\n'
     output += '## ----------------------------------------------------------------------------------------\n'
 
     h = obj.simulation.hubble_constant
@@ -76,11 +76,12 @@ def info(obj, snapFile, top=None, savetxt=False):
         # print bm, fedd
         # import pdb; pdb.set_trace()
 
-        output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e   %0.3f   %0.3f  %0.3f  %0.2e  %0.2e  %0.3f  %0.2e  %s\t|  %0.2e  %d \n' % \
+        output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e   %0.3f   %0.3f  %0.3f  %0.2e  %0.2e  %0.3f  %0.2e  %s\t|  %0.2e  %d \n' % \
                   (o.GroupID, o.masses['stellar'], o.masses['gas'],
                    bm,
                    fedd,
                    o.sfr,
+                   o.sfr/np.pi/o.radii['gas']**2,
                    o.radii['baryon'],
                    o.radii['gas'],
                    o.radii['gas_half_mass'],
@@ -284,8 +285,36 @@ if __name__ == '__main__':
     output, outName = info(obj, snapFile, top=None, savetxt=True)
     savedir='../plots/' + str(outName[:outName.find('.txt')]) + '/'
 
-    fig, ax = plot_info(2, 1, inFile=outName, xlabel='Mgas', ylabel='Mstar',
+    fig, ax = plot_info(1, 20, inFile=outName, colNumz=17, zlabel='fgas',
+                        xlabel='Mstar', ylabel='Mhalo',
                         savedir=savedir)
+
     fig, ax = plot_info(2, 1, inFile=outName, colNumz=3, xlabel='Mgas', \
                         ylabel='Mstar', zlabel='MBH', savedir=savedir)
+
+    fig, ax = plot_info(2, 1, inFile=outName, colNumz=5, xlabel='Mgas', \
+                        ylabel='Mstar', zlabel='SFR', savedir=savedir)
+
+    # MZR:
+    fig, ax = plot_info(1, 14, inFile=outName, colNumz=12, xlabel='Mstar', \
+                    ylabel='Zstellar', zlabel='Zgas', savedir=savedir)
+
+    fig, ax = plot_info(1, 12, inFile=outName, colNumz=17, xlabel='Mstar', \
+                    ylabel='Zgas', zlabel='fgas', savedir=savedir)
+
+    # FMR: SFR - Z - M*
+    fig, ax = plot_info(5, 12, inFile=outName, colNumz=1, xlabel='SFR', \
+                    ylabel='Zgas', zlabel='Mstar', savedir=savedir)
+
+    # SFR f_gas
+    fig, ax = plot_info(5, 17, inFile=outName, colNumz=1, xlabel='SFR', \
+                    ylabel='fgas', zlabel='Mstar', savedir=savedir)
+
+    fig, ax = plot_info(6, 17, inFile=outName, colNumz=7, xlabel='SFRSD', \
+                    ylabel='f_gas', zlabel='R', savedir=savedir)
+
+    exit()
+
+
+
 
