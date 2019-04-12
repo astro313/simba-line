@@ -186,6 +186,10 @@ def plot_info(colNumx, colNumy, inFile,
     colNumy = int(colNumy)
     xxx, yyy = np.genfromtxt(inFile, usecols=(colNumx, colNumy), unpack=True)
 
+    if colNumz:
+        colNumz = int(colNumz)
+        zzz = np.genfromtxt(inFile, usecols=(colNumz))
+
     import matplotlib.pyplot as plt
     cm = setup_plot()
     plt.close('all')
@@ -197,34 +201,33 @@ def plot_info(colNumx, colNumy, inFile,
         bad = xxx == 0.0
         xxx = xxx[~bad]
         yyy = yyy[~bad]
+        if colNumz:
+            zzz = zzz[~bad]
 
     if ylabel[0] == 'M':
         bad = yyy == 0.0
         xxx = xxx[~bad]
         yyy = yyy[~bad]
+        if colNumz:
+            zzz = zzz[~bad]
 
     if not ythreshold is None:
         # select points with threshold above certain values in yaxis
         good = yyy > ythreshold
         yyy = yyy[good]
         xxx = xxx[good]
+        if colNumz:
+            zzz = zzz[good]
 
     if not xthreshold is None:
-        import pdb; pdb.set_trace()
         good = xxx > xthreshold
         yyy = yyy[good]
         xxx = xxx[good]
+        if colNumz:
+            zzz = zzz[good]
 
     if colNumz:
         fig.subplots_adjust(right=0.84, wspace=0.01)
-        colNumz = int(colNumz)
-        zzz = np.genfromtxt(inFile, usecols=(colNumz))
-
-        if ythreshold:
-            zzz = zzz[good]
-
-        if xthreshold:
-            zzz = zzz[good]
 
         if logz:
             if zzz.min() == 0.0:
@@ -236,7 +239,7 @@ def plot_info(colNumx, colNumy, inFile,
             c = list(zzz)
 
         if cmap is None:
-            cm = plt.get_cmap()
+            cmap = plt.get_cmap()
         else:
             cmap = matplotlib.cm.get_cmap(cmap)
         normalize = matplotlib.colors.Normalize(vmin=min(c), vmax=max(c))
@@ -265,9 +268,6 @@ def plot_info(colNumx, colNumy, inFile,
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.minorticks_on()
-
-    print np.log10(yyy)
-    import pdb; pdb.set_trace()
 
     if colNumz:
         cax, _ = matplotlib.colorbar.make_axes(ax)
@@ -368,7 +368,7 @@ if __name__ == '__main__':
 
     infile = caesar_dir + name_prefix + '{:0>3}'.format(int(36)) + \
                 '.hdf5'
-    obj = caesar.load(infile, LoadHalo=LoadHalo)
+#    obj = caesar.load(infile, LoadHalo=LoadHalo)
     snapFile = raw_sim_dir + raw_sim_name_prefix + '{:0>3}'.format(int(36)) + '.hdf5'
 
     output, outName = info(obj, snapFile, top=None, savetxt=True)
@@ -392,7 +392,7 @@ if __name__ == '__main__':
                     savedir=savedir)
 
     fig, ax = plot_info(1, 14, inFile=outName, colNumz=19, xlabel='Mstar', \
-                    ylabel='Zgas',
+                    ylabel='Zgas', ythreshold=0.0,
                     logy=False,
                     zlabel='fgas', logz=False, savedir=savedir)
 
