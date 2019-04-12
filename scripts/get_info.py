@@ -299,7 +299,7 @@ def plot_info(colNumx, colNumy, inFile,
             litpath + "Genzel_KSpoints.txt", unpack=True)  # in log
 
         ax.scatter(10**x0901, 10**y0901, label="J0901 @ z=2.26",
-                   color='red', marker='o', s=5, facecolors='none', alpha=0.6)
+                   color='gray', marker='o', s=5, facecolors='none', alpha=0.6)
         ax.scatter(x14011, y14011, label="SMM J14011 @ z=2.56",
                    color='darkblue', marker='^', s=13, facecolors='none', alpha=0.8)
         ax.scatter(10**xrawle, 10**yrawle, label="HLS0918 @ z=5.24",
@@ -312,7 +312,29 @@ def plot_info(colNumx, colNumy, inFile,
                     label="EGS13011166 @ z=1.53",
                     color='green', fmt='D', markersize=3.5,
                     markeredgewidth=0.6, mfc='none', zorder=0.5, alpha=0.56, elinewidth=0.5)
-        ax.legend(loc='best', ncol=2)
+
+        # Leung19
+        ax.errorbar(590, 10, xerr=410,
+                    label='HXMM05 (global) @ z=2.99',
+                    color='red',
+                    fmt='*',
+                    markersize=8,
+                    markeredgewidth=0.8, mfc='red', zorder=100, alpha=0.9,
+                    elinewidth=0.5)
+
+        # Riechers17
+        ax.errorbar([7.3e10/(1.e3)**2, 8.1e10/(1.e3)**2], [730, 750],
+                    label='ADFS-27 @ z=5.66',
+                    color='darkred',
+                    fmt='x',
+                    markersize=4.5,
+                    markeredgewidth=0.8, mfc='none', zorder=0.85, alpha=0.56,
+                    elinewidth=0.5)
+
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0 + 0.25, box.width, box.height*0.8])
+        ax.legend(loc="upper center", ncol=4, fontsize=9,
+                   bbox_to_anchor=(0.5, 1.25), markerscale=3)
 
     if not saveFig:
         plt.show(block=False)
@@ -376,7 +398,7 @@ if __name__ == '__main__':
 
     infile = caesar_dir + name_prefix + '{:0>3}'.format(int(36)) + \
                 '.hdf5'
-#    obj = caesar.load(infile, LoadHalo=LoadHalo)
+    obj = caesar.load(infile, LoadHalo=LoadHalo)
     snapFile = raw_sim_dir + raw_sim_name_prefix + '{:0>3}'.format(int(36)) + '.hdf5'
 
     output, outName = info(obj, snapFile, top=None, savetxt=True)
@@ -392,6 +414,11 @@ if __name__ == '__main__':
     fig, ax = plot_info(2, 1, inFile=outName, colNumz=5, xlabel='Mgas', \
                         ylabel='Mstar', zlabel='SFR', logz=False,
                         savedir=savedir)
+
+    fig, ax = plot_info(1, 5, inFile=outName, xlabel='Mstar', ylabel='SFR',
+                        ythreshold=0.1,
+                        savedir=savedir)
+
     # MZR:
     fig, ax = plot_info(1, 16, inFile=outName, colNumz=14, xlabel='Mstar', \
                     ylabel='Zstellar',
