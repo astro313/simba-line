@@ -18,7 +18,8 @@ if len(sys.argv) > 1:
 else:
     debug = False
 
-snapRange = [36]    # don't put 036
+print("Extracting galaxies from z6 ONLY, for now.. we may need to extract galaxies from other redshift.... But hopefully we don't have to")
+snapRange = [36]    # don't put 036!
 zCloudy = 6
 raw_sim_name_prefix = 'snap_m25n1024_'
 name_prefix = 'm25n1024_'
@@ -35,7 +36,7 @@ elif 'flatironinstitute.org' or 'worker' in host:
     redshiftFile = '/mnt/ceph/users/daisyleung/simba/gizmo-extra/outputs_boxspace50.info'
     d_data = '/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/z' + str(int(zCloudy)) + '_data_files/'
 
-# # this doesn't affect ouput, just for inspection
+# this doesn't affect ouput, just for inspection
 # Nhalo = 10
 # Ngalaxies = 10
 # total_Ngal = get_basic_info_from_caesarCat(snapRange, Nhalo, Ngalaxies, caesar_dir, name_prefix)
@@ -44,16 +45,13 @@ elif 'flatironinstitute.org' or 'worker' in host:
 # print total_Ngal
 # Ngalaxies = total_Ngal
 
-# ggg = select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Ngalaxies)
+# ggg = select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Ngalaxies, saveggg='ggg.pkl')
 
-# for debugging, I don't want to have to run select_SFgal_from_simba() again and again
-with open('ggg.pkl', 'w') as f:
-    pickle.dump([ggg], f)
+# galnames, zred = simba_to_pd('ggg.pkl', raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, plotgas=False, debug=debug)
 
-with open('ggg.pkl', 'r') as f:
-    ggg = pickle.load(f)
+# _, _ = pd_bookkeeping(galnames, zred, zCloudy)
 
-galnames, zred = simba_to_pd(ggg, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, plotgas=False, debug=debug)
 
-_, _ = pd_bookkeeping(galnames, zred, zCloudy)
+from parse_simba import hack_galNames
+galnames, zred = hack_galNames(d_data+'particle_data/sim_data/')
 

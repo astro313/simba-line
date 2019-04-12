@@ -46,7 +46,7 @@ def get_basic_info_from_caesarCat(snapRange, Nhalo, Ngalaxies, caesar_dir, name_
     return Ngal
 
 
-def select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Ngalaxies, verbose=False, debug=False):
+def select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Ngalaxies, saveggg=None, verbose=False, debug=False):
 
     '''
         pick out the 'Ngalaxies' most star-forming galaxies across snapshots 'snapRange'
@@ -65,13 +65,13 @@ def select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_p
         snapshots to look for galaxies
     Ngalaxies: int
         how many galaxies from each snapshot across all halos do we want as output
+    saveggg: str
+        filename to save output "galnames_selected"
 
     Returns
     -------
     galnames_selected: list of string
         galaxies names indicating the halo ID, snapshot number, and galaxy ID (numbered based on some predefined criterion)
-    zreds_selected: numpy array of float
-        redshifts of galaxies
 
     '''
 
@@ -112,6 +112,10 @@ def select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_p
     print("Note to self: Remember to change variable global_save_files in param.py so that naming is consistent with Ngalaxies we are picking here")
     galnames = galnames[:Ngalaxies]
     print galnames
+
+    if saveggg is not None:
+        with open(saveggg, 'w') as f:
+            pickle.dump([ggg], f)
     return galnames
 
 
@@ -169,8 +173,9 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
 
     Parameters
     ----------
-    nproc: int
-        number of processes
+    galnames: str or list of string
+        if it's a simple str, it's a file that stores the output from return from select_SFgal_from_simba()
+        if it's a list of str, it's output from select_SFgal_from_simba()
     raw_sim_dir: string
         where to look for raw snapshot files
     raw_sim_name_prefix: string
@@ -209,6 +214,13 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
     # Save the names and redshift for the galaxies that we finally decide to save in DataFrames:
     galnames_selected   =   []
     zreds_selected      =   np.array([])
+
+    if type(galnames) is str:
+        try:
+            with open(galnames, 'r') as f:
+                galnames = pickle.load(f)
+        except:
+            pass
 
     try:
         print galnames['halo'].values, galnames['snap'].values, galnames['GAL'].values, galnames['SFR'].values
@@ -569,6 +581,33 @@ def fetch_ss_from_closest_redshift(redshift, redshiftFile):
 
     snapshotNum = np.argmin(abs(zs_table - redshift))
     return snapshotNum
+
+
+def hack_galNames(pdPath):
+    """
+
+    Since it takes time to extract galaxies, I want to be able to look at properties of galaxies we have extracted so far. So I needed a way to "re-created" the output variables of simba_to_pd().
+
+    This is a very hacky, ad-hoc code. Don't use for science!
+
+    pdPath: str
+        path to where the pandas dataframes are saved.
+        .gas, .star, .dm
+        default should be inside d_data + 'particle_data/sim_data/'
+
+    """
+
+    import glob
+    gasF = glob.glob("*gas")
+    print gasF
+    import pdb; pdb.set_trace()
+    zreds_selected = [float(ii[1:6]) for ii in gasF]
+    print zreds_selected
+
+    galnames_selected = [ii[6:ii.find['_sim']] for ii in gasF]
+    print galnames_selected
+
+    return galnames_selected, zreds_selected
 
 
 if __name__ == '__main__':
