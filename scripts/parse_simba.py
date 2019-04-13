@@ -105,7 +105,7 @@ def select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_p
             except:
                 break
 
-    print("\nSelecing {} Galaxies with the highest SFRs across snapshot 'snapRange', but you may want to galaxies based on different criteria.").format(Ngalaxies)
+    print("\nSelecing {} Galaxies with the highest SFRs across snapshot 'snapRange', but you may want to galaxies based on different criteria.\nIf so, edit define_ds()").format(Ngalaxies)
     galnames = galnames.sort_values(['SFR'], ascending=False).reset_index(drop=True)
     if debug:
         print galnames
@@ -149,6 +149,7 @@ def define_ds(snap, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, r
         '.hdf5'
     print("Loading Ceasar file: {}").format(infile)
     obj = caesar.load(infile, LoadHalo=False)
+    obj.galaxies.sort(key=lambda x: x.sfr, reverse=True)
 
     rawSim = raw_sim_dir + raw_sim_name_prefix + \
         '{:>03}'.format(int(snap)) + '.hdf5'
@@ -202,6 +203,7 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
 
     """
 
+    import cPickle as pickle
     import caesar
     import yt
     import numpy as np
@@ -210,6 +212,7 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
     import os
 
     kpc2m = 3.085677580666e19
+    resort = False
 
     # Save the names and redshift for the galaxies that we finally decide to save in DataFrames:
     galnames_selected   =   []
@@ -229,7 +232,8 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
 
     if (sorted(galnames['snap'].values) == galnames['snap'].values).all() == False:
         # then we have to sort galnames by 'snap'
-        galnames = galnames.sort_values(['snap'], ascending=False).reset_index(drop=True)   # drop: avoid old index being added as a column
+        galnames = galnames.sort_values(['snap', 'SFR'], ascending=[False, False]).reset_index(drop=False)   # drop: avoid old index being added as a column
+        resort = True
 
     snap_hold = []
     for num, (halo, snap, GAL, sfr) in enumerate(zip(galnames['halo'].values, galnames['snap'].values, galnames['GAL'].values, galnames['SFR'].values)):
@@ -237,11 +241,15 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
         if num == 0:
             snap_hold = snap
             s, h, obj, ds, zred = define_ds(snap, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile)
-
         else:
             if snap != snap_hold:
                 s, h, obj, ds, zred = define_ds(snap, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile)
                 snap_hold = snap
+
+        # if we have sorted galnames by 'snap', we have to do so for obj too.
+        if resort:
+            gal = obj.galaxies
+            obj.galaxies = [gal[i] for i in galnames.index.values]
 
         print('\nNow looking at galaxy # %s with parent halo ID %s in snapshot %s at z = %s' % (
             int(GAL), int(halo), int(snap), zred))
