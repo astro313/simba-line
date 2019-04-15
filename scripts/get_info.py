@@ -39,7 +39,7 @@ def info(obj, snapFile, top=None, savetxt=False):
 
     cnt = 1
 
-    output += '## ID      Mstar     Mgas      MBH    fedd    SFR [Msun/yr]      SFRSD [Msun/yr/kpc^2]    SFRSD_r_stellar_half_mass [Msun/yr/kpc^2]    gasSD [Msun/pc^2]    r_baryon   r_gas      r_gas_half_mass      r_stellar    r_stellar_half_mass    Z_sfrWeighted [/Zsun]    Z_massWeighted [/Zsun]     Z_stellar [/Zsun]     T_gas_massWeighted    T_gas_SFRWeighted   fgas   nrho      Central\t|  Mhalo     HID\n'
+    output += '## ID      Mstar     Mgas      MBH    fedd    SFR [Msun/yr]      SFRSD [Msun/yr/kpc^2]    SFRSD_r_stellar_half_mass [Msun/yr/kpc^2]    gasSD [Msun/pc^2]    r_baryon   r_gas      r_gas_half_mass      r_stellar    r_stellar_half_mass    Z_sfrWeighted [/Zsun]    Z_massWeighted [/Zsun]     Z_stellar [/Zsun]     T_gas_massWeighted    T_gas_SFRWeighted   fgas   fgas_massRatio   nrho      Central\t|  Mhalo_parent     HID\n'
     output += '## ----------------------------------------------------------------------------------------\n'
 
     h = obj.simulation.hubble_constant
@@ -76,7 +76,7 @@ def info(obj, snapFile, top=None, savetxt=False):
         # print bm, fedd
         # import pdb; pdb.set_trace()
 
-        output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e   %0.3f   %0.3f  %0.3f  %0.2e  %0.2e  %0.3f  %0.2e  %s\t|  %0.2e  %d \n' % \
+        output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e   %0.3f   %0.3f  %0.3f  %0.2e  %0.2e  %0.3f  %0.3f  %0.2e  %s\t|  %0.2e  %d \n' % \
                   (o.GroupID, o.masses['stellar'], o.masses['gas'],
                    bm,
                    fedd,
@@ -95,6 +95,7 @@ def info(obj, snapFile, top=None, savetxt=False):
                    o.temperatures['mass_weighted'],
                    o.temperatures['sfr_weighted'],
                    o.gas_fraction,
+                   o.masses['gas']/(o.masses['stellar'] + o.masses['gas']),
                    o.local_number_density, o.central,
                    phm, phid)
 
@@ -404,15 +405,15 @@ if __name__ == '__main__':
     output, outName = info(obj, snapFile, top=None, savetxt=True)
     savedir='../plots/' + str(outName[:outName.find('.txt')]) + '/'
 
-    fig, ax = plot_info(1, 22+1, inFile=outName, colNumz=19, zlabel='fgas',
-                        xlabel='Mstar', ylabel='Mhalo', logz=False,
+    fig, ax = plot_info(23+1, 1, inFile=outName, colNumz=20, zlabel='fgas',
+                        xlabel='Mhalo', ylabel='Mstar', logz=False,
                         savedir=savedir)
 
     fig, ax = plot_info(2, 1, inFile=outName, colNumz=3, xlabel='Mgas', \
                         ylabel='Mstar', zlabel='MBH', savedir=savedir)
 
     fig, ax = plot_info(2, 1, inFile=outName, colNumz=5, xlabel='Mgas', \
-                        ylabel='Mstar', zlabel='SFR', logz=False,
+                        ylabel='Mstar', zlabel='SFR',
                         savedir=savedir)
 
     fig, ax = plot_info(1, 5, inFile=outName, xlabel='Mstar', ylabel='SFR',
@@ -426,7 +427,7 @@ if __name__ == '__main__':
                     zlabel='Zgas', logz=False,
                     savedir=savedir)
 
-    fig, ax = plot_info(1, 14, inFile=outName, colNumz=19, xlabel='Mstar', \
+    fig, ax = plot_info(1, 14, inFile=outName, colNumz=20, xlabel='Mstar', \
                     ylabel='Zgas', ythreshold=0.0,
                     logy=False,
                     zlabel='fgas', logz=False, savedir=savedir)
@@ -439,11 +440,11 @@ if __name__ == '__main__':
                     zlabel='Mstar', savedir=savedir)
 
     # SFR f_gas
-    fig, ax = plot_info(5, 19, inFile=outName, colNumz=1, xlabel='SFR', \
+    fig, ax = plot_info(5, 20, inFile=outName, colNumz=1, xlabel='SFR', \
                     xthreshold=0.1,
                     ylabel='fgas', logy=False, zlabel='Mstar', savedir=savedir)
 
-    fig, ax = plot_info(6, 19, inFile=outName, colNumz=9,
+    fig, ax = plot_info(6, 20, inFile=outName, colNumz=9,
                     xlabel='SFRSD [Msun/pc2]',
                     xthreshold=0.0,
                     ylabel='fgas', logy=False, zlabel='Rbaryon [kpc]',
