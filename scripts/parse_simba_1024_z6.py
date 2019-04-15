@@ -47,11 +47,13 @@ elif 'flatironinstitute.org' or 'worker' in host:
 
 # ggg = select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Ngalaxies, saveggg='ggg.pkl')
 
-# galnames, zred = simba_to_pd('ggg.pkl', raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, plotgas=False, debug=debug)
+galnames, zred = simba_to_pd('ggg.pkl', raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, plotgas=False, debug=debug)
 
+_, _ = pd_bookkeeping(galnames, zred, zCloudy)
+
+
+# to go with whatever has been extracted so far.... then uncomment the following...
+# from parse_simba import hack_galNames
+# galnames, zred = hack_galNames(d_data+'particle_data/sim_data/')
 # _, _ = pd_bookkeeping(galnames, zred, zCloudy)
-
-
-from parse_simba import hack_galNames
-galnames, zred = hack_galNames(d_data+'particle_data/sim_data/')
 
