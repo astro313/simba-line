@@ -4,7 +4,10 @@ getting all z~6 galaxies in the 1024 sims, from the 25 cMpc/h box, but they seem
 
 """
 
-import cPickle as pickle
+try:
+    import cPickle as pickle
+except:
+    import _pickle as pickle     # py3
 try:
     from parse import *
 except:
@@ -47,7 +50,7 @@ elif 'flatironinstitute.org' or 'worker' in host:
 
 # ggg = select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Ngalaxies, saveggg='ggg.pkl')
 
-galnames, zred = simba_to_pd('ggg.pkl', raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, plotgas=False, debug=debug)
+galnames, zred = simba_to_pd('ggg.pkl', raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, debug=debug, startGAL=None, endGAL=None)
 
 _, _ = pd_bookkeeping(galnames, zred, zCloudy)
 
