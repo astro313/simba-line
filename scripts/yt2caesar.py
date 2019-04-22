@@ -1,6 +1,8 @@
 """
 
-Regardless of RD's comment on caesar gas field, we are sticking with caesar gas mass so that gas_f_neu, f_h2 is consistent. Otherwise the number don't add up. Meaning that
+Regardless of RD's comment on caesar gas field, we are sticking with
+caesar gas mass so that gas_f_neu, f_h2 is consistent.
+Otherwise the number don't add up. Meaning that
 
 gal.masses['HI'] >> np.sum(gas_f_neu * gas_m)
 so then gas_f_neu wouldn't be useful anymore.
@@ -11,6 +13,11 @@ so then gas_f_neu wouldn't be useful anymore.
 from __future__ import print_function, division
 from astropy import constants as constants
 from readgadget import *
+
+# for consistency, will use python 3 for all scripts of this project.
+import sys
+if sys.version_info[0] < 3:
+    raise Exception("Python 3 or a more recent version is required.")
 
 import _pickle as pickle
 from parse_simba import *
@@ -205,7 +212,7 @@ class particles2pd(object):
 
         self.h = self.obj.simulation.hubble_constant
         # self.redshift = np.round(self.obj.simulation.redshift, redshiftDecimal)
-        self.redshift = np.round(self.obj.simulation.redshift, redshiftDecimal)
+        self.redshift = self.obj.simulation.redshift
 
         # snap
         self.snapFile = self.def_snapFileName()
