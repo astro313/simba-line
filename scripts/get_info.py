@@ -1,6 +1,6 @@
 """
 
-extract global properties of galaxies and then plot them.
+extract global properties of galaxies (the entire samples) and then plot them.
 
 """
 
