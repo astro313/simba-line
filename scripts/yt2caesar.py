@@ -128,7 +128,7 @@ def check_dense_gas(dir='./'):
 class particles2pd(object):
 
 
-    def __init__(self, snapRange=[36], name_prefix='m25n1024_', feedback='s50/', zCloudy=6, min_dense_gas=1.e4):
+    def __init__(self, snapRange=[36], name_prefix='m25n1024_', feedback='s50/', zCloudy=6, part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e5, debug=False, verbose=True):
         """
 
         Parameters
@@ -145,7 +145,13 @@ class particles2pd(object):
         zCloudy: float
             redshift to use for cloudy table
 
-        min_dense_gas: float
+        part_threshold: int
+            both stars and gas particles must be > part_threshold particles each.
+
+        sfr_threshold: float
+            lower limit of SFR to include in sample
+
+        denseGasThres: float
             min. gas in dense phase in Msun in order for a galaxy to be included. If too small, we won't be able to do GMC subgridding.
         """
 
@@ -160,8 +166,12 @@ class particles2pd(object):
         self.feedback = feedback
 
         self.raw_sim_name_prefix = 'snap_' + name_prefix
-        self.min_dense_gas = min_dense_gas       # Msun
+        self.part_threshold = part_threshold
+        self.sfr_threshold = sfr_threshold
+        self.denseGasThres = denseGasThres       # Msun
 
+        self.debug = debug
+        self.verbose = verbose
         self.setup()
 
     def setup(self, user='Daisy'):
@@ -218,25 +228,43 @@ class particles2pd(object):
         self.snapFile = self.def_snapFileName()
 
 
-    def run(self, savepath=None):
+    def run(self, savepath=None, outname=None, emptyDM=True, caesarRotate=False):
         """
         Loop through snapRange and run main_proc()
+
+        Parameters
+        ----------
+        savepath: str
+            where the pandas .gas, .star, .dm should be saved to
+            default is None, which means subdir of sigame
+
+        emptyDM: bool
+            if True, will create empty holders as DM position, mass, velocity to save as pandas dataframe. Do so because we don't have a dmlist from caesar catalog and we don't need it really.
+
+        outname: str
+            path to where zx_extracted_gals is stored for global_results.py to read
+
+        caesarRotate: bool
+            whether to project gal to xy-plane.
 
         """
 
         for idx in range(len(self.snapRange)):
             self.load_obj_snap(idx)
             if idx == 0:
-                gnames, zzz = self.main_proc(savepath=savepath)
+                gnames, zzz = self.main_proc(savepath=savepath, emptyDM=emptyDM, caesarRotate=caesarRotate)
             else:
-                gnamesOut, zzzRed = self.main_proc(savepath=savepath)
+                gnamesOut, zzzRed = self.main_proc(savepath=savepath, emptyDM=emptyDM, caesarRotate=caesarRotate)
                 gnames.extend(gnamesOut)
                 zzz.extend(zzzRed)
+
+        from parse_simba import pd_bookkeeping
+        _, _ = pd_bookkeeping(ganmes, zzz, self.zCloudy, outname=outname)
 
         return gnames, zzz
 
 
-    def main_proc(self, savepath=None, part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e5, emptyDM=True, debug=False, verbose=True, caesarRotate=False):
+    def main_proc(self, savepath, emptyDM, caesarRotate):
 
         """
         Parameters
@@ -246,17 +274,11 @@ class particles2pd(object):
             where the pandas .gas, .star, .dm should be saved to
             default is None, which means subdir of sigame
 
-        part_threshold: int
-            both stars and gas particles must be > part_threshold particles each.
-
-        sfr_threshold: float
-            lower limit of SFR to include in sample
-
-        denseGasThres: float
-            lower limit in dense gas to include in sample, should be >1.e5 Msun, otherwise will get an error in subgrid GMC step.
-
         emptyDM: bool
             if True, will create empty holders as DM position, mass, velocity to save as pandas dataframe. Do so because we don't have a dmlist from caesar catalog and we don't need it really.
+
+        caesarRotate: bool
+            whether to project gal to xy-plane.
 
         Returns
         -------
@@ -405,7 +427,7 @@ class particles2pd(object):
 
             gas_pos = group_part_by_galaxy(gas_pos_p, gal, ptype='gas')
 
-            if len(gal.slist) < part_threshold or len(gal.glist) < part_threshold:
+            if len(gal.slist) < self.part_threshold or len(gal.glist) < self.part_threshold:
                 print("Too few star particles or gas particles, unlikely to be real galaxy or useful for our purpose. Skipping ", galname)
                 continue
 
@@ -473,15 +495,15 @@ class particles2pd(object):
                 import pdb; pdb.set_trace()
 
             # selection crit.
-            if gas_SFR.sum() <= sfr_threshold:
+            if gas_SFR.sum() <= self.sfr_threshold:
                 print("SFR too low.. Skipping ", galname)
                 continue
 
-            if (gas_m * gas_f_H2).sum() <= denseGasThres:
+            if (gas_m * gas_f_H2).sum() <= self.denseGasThres:
                 print ("Dense gas mass less than %.2f Msun.. Skipping %s" % (denseGasThres, galname ))
                 continue
 
-            if len(gal.slist) < part_threshold or len(gal.glist) < part_threshold:
+            if len(gal.slist) < self.part_threshold or len(gal.glist) < self.part_threshold:
                 print("Too few star particles or gas particles, unlikely to be real galaxy or useful for our purpose. Skipping ", galname)
                 continue
 
@@ -587,9 +609,9 @@ class particles2pd(object):
 
 if __name__ == '__main__':
 
-    pp = particles2pd(snapRange=[36],name_prefix='m25n1024_', feedback='s50/', zCloudy=6, min_dense_gas=1.e4)
+    pp = particles2pd(snapRange=[36],name_prefix='m25n1024_', feedback='s50/', zCloudy=6, part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
 
-    ggg, zred = pp.run(savepath='xxx/')
+    ggg, zred = pp.run(savepath='xxx/', outname=None, emptyDM=True, caesarRotate=False)
     print(ggg)
 
 
