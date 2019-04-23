@@ -128,7 +128,7 @@ def check_dense_gas(dir='./'):
 class particles2pd(object):
 
 
-    def __init__(self, snapRange=[36], name_prefix='m25n1024_', feedback='s50/', zCloudy=6, part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e5, debug=False, verbose=True):
+    def __init__(self, snapRange=[36], name_prefix='m25n1024_', feedback='s50/', zCloudy=6, part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e5, user='Daisy', debug=False, verbose=True):
         """
 
         Parameters
@@ -170,11 +170,13 @@ class particles2pd(object):
         self.sfr_threshold = sfr_threshold
         self.denseGasThres = denseGasThres       # Msun
 
+        self.user = user
+
         self.debug = debug
         self.verbose = verbose
         self.setup()
 
-    def setup(self, user='Daisy'):
+    def setup(self):
         """
 
         setup path to simulation file and path to save pandas dataframe.
@@ -182,7 +184,7 @@ class particles2pd(object):
 
         """
 
-        if user is 'Daisy':
+        if self.user is 'Daisy':
             import socket
             host = socket.gethostname()
 
@@ -309,7 +311,7 @@ class particles2pd(object):
         # load in the fields from snapshot
         print("Read in gas fields")
 
-        if debug:
+        if self.debug:
             # compare against output saved from YT (parse_simba.py)
             sim_gas = pd.read_pickle('/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/z6_data_files/particle_data/sim_data/z5.93_h0_s36_G0_sim.gas')
             sim_star = pd.read_pickle('/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/z6_data_files/particle_data/sim_data/z5.93_h0_s36_G0_sim.star')
@@ -322,7 +324,7 @@ class particles2pd(object):
         # print(gas_densities_p.min(), gas_densities_p.max())
         #
 
-        if verbose or debug:
+        if self.verbose or self.debug:
             # not acutally used in the dataframe
             gas_nh_p = gas_densities_p*self.h*self.h*0.76/self.Mp     # number density of H in 1/cc
 
@@ -349,7 +351,7 @@ class particles2pd(object):
 
         gas_x_e_p = readsnap(self.snapFile,'ne','gas',units=1)
 
-        if debug:
+        if self.debug:
             nH = gfHI_p*gas_densities_p/self.Mp              # number density
             print('nH: ')
             print('from gfHI and gas density of readsnap')
@@ -392,14 +394,14 @@ class particles2pd(object):
             galname = 'h' + str(int(gal.parent_halo_index)) + '_s' + \
                 str(int(self.snap)) + '_G' + str(int(gg))
 
-            if verbose:
+            if self.verbose:
                 print(galname)
                 print("SFR: {:.2f}".format(gal.sfr))
 
             gas_m = group_part_by_galaxy(gas_p_m, gal, ptype='gas')
             gas_densities = group_part_by_galaxy(gas_densities_p, gal, ptype='gas')
 
-            if debug:
+            if self.debug:
                 print("from readsnap: ")
                 print(gas_densities.max(), gas_densities.min())    # g/cc
                 print("from YT sphere: ")
@@ -460,7 +462,7 @@ class particles2pd(object):
             gas_f_H2 = group_part_by_galaxy(gfH2_p, gal, ptype='gas')
             gas_f_neu = group_part_by_galaxy(gfHI_p, gal, ptype='gas')   # f_neu
 
-            if debug:
+            if self.debug:
                 print("HI fraction")
                 print(gas_f_neu.min(), gas_f_neu.max())    # following RD's def.
                 print((1-gas_f_H2).min(), (1-gas_f_H2).max())
@@ -473,12 +475,12 @@ class particles2pd(object):
             gas_f_HI = 1 - gas_f_ion
             assert abs(gas_f_HI.all()) <= 1.0
 
-            if debug:
+            if self.debug:
                 print(gas_f_HI >= gas_f_neu)     # former incl. also molecular
                 print((gas_f_HI >= gas_f_neu).all())   # expecting True
                 import pdb; pdb.set_trace()
 
-            if debug:
+            if self.debug:
                 print('\nChecking molecular gas mass fraction from simulation:')
                 print('%.3s %% \n' % (np.sum(gas_m * gas_f_H2) / np.sum(gas_m) * 100.))
                 #
@@ -586,19 +588,24 @@ class particles2pd(object):
                                    'a_Ne': gas_Z_5, 'a_Mg': gas_Z_6,
                                     'a_Si': gas_Z_7, 'a_S': gas_Z_8,
                                     'a_Ca': gas_Z_9, 'a_Fe': gas_Z_10})
-            simgas.to_pickle(simgas_path)
-
 
             simstar = pd.DataFrame({'x': star_x, 'y': star_y, 'z': star_z,
                                     'vx': star_vx, 'vy': star_vy, 'vz': star_vz,
                                     'Z': star_Z, 'm': star_m, 'age': star_age})
-            simstar.to_pickle(simstar_path)
-
 
             # create fake DM dataframe to trick Sigame
             simdm = pd.DataFrame({'x': dm_posx, 'y': dm_posy, 'z': dm_posz,
                                   'vx': dm_velx, 'vy': dm_vely, 'vz': dm_velz,
                                   'm': dm_m})
+
+
+            from parse_simba import center_cut_galaxy
+            simgas, simstar, simdm = center_cut_galaxy(simgas, simstar, simdm, plot=False)
+            import pdb; pdb.set_trace()
+
+
+            simgas.to_pickle(simgas_path)
+            simstar.to_pickle(simstar_path)
             simdm.to_pickle(simdm_path)
 
             galName.append(galname)
@@ -609,7 +616,7 @@ class particles2pd(object):
 
 if __name__ == '__main__':
 
-    pp = particles2pd(snapRange=[36],name_prefix='m25n1024_', feedback='s50/', zCloudy=6, part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
+    pp = particles2pd(snapRange=[36],name_prefix='m25n1024_', feedback='s50/', zCloudy=6, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
 
     ggg, zred = pp.run(savepath='xxx/', outname=None, emptyDM=True, caesarRotate=False)
     print(ggg)
