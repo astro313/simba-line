@@ -227,11 +227,13 @@ class particles2pd(object):
         for idx in range(len(self.snapRange)):
             self.load_obj_snap(idx)
             if idx == 0:
-                gnames = self.main_proc(savepath=savepath)
+                gnames, zzz = self.main_proc(savepath=savepath)
             else:
-                gnamesOut = self.main_proc(savepath=savepath)
+                gnamesOut, zzzRed = self.main_proc(savepath=savepath)
                 gnames.extend(gnamesOut)
-        return gnames
+                zzz.extend(zzzRed)
+
+        return gnames, zzz
 
 
     def main_proc(self, savepath=None, part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e5, emptyDM=True, debug=False, verbose=True, caesarRotate=False):
@@ -360,6 +362,7 @@ class particles2pd(object):
                          7.14e-4, 6.17e-4, 3.12e-4, 0.65e-4, 1.31e-3]
 
         galName = []
+        zred = []
         for gg, gal in enumerate(self.obj.galaxies):
 
             loc = gal.pos    # ckpc
@@ -577,8 +580,8 @@ class particles2pd(object):
             simdm.to_pickle(simdm_path)
 
             galName.append(galname)
-        return galName
-
+            zred.append(self.redshift)
+        return galName, zred
 
 
 
@@ -586,7 +589,7 @@ if __name__ == '__main__':
 
     pp = particles2pd(snapRange=[36],name_prefix='m25n1024_', feedback='s50/', zCloudy=6, min_dense_gas=1.e4)
 
-    ggg = pp.run(savepath='xxx/')
+    ggg, zred = pp.run(savepath='xxx/')
     print(ggg)
 
 
