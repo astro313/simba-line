@@ -166,139 +166,6 @@ def define_ds(snap, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, r
     return s, h, obj, ds, float(zred)
 
 
-def center_cut_galaxy(simgas, simstar, simdm, plot=False):
-    print(' ** Center galaxy in spatial and velocity coordinates, gas+stars, and cut out! **')
-    plt.close('all')
-
-    print('Number of gas particles: ' + str(len(simgas)))
-    print('Number of star particles: ' + str(len(simstar)))
-    print('Number of DM particles: ' + str(len(simdm)))
-
-    # Define R_gal from simulation cutout
-    R_gal = max(np.sqrt(simgas['x']**2. + simgas['y']**2. + simgas['z']**2.))
-    print('R_gal = ' + str.format("{0:.2f}", R_gal) + ' kpc (from simulation)')
-
-    print('Center all in x,y,z spatial coordinates (according to stellar distribution)')
-    dat = simstar
-    bins = 200.
-    r = np.sqrt(dat['x'].values**2. + dat['y'].values**2. + dat['z'].values**2.)
-    # r_bin           =   np.arange(-max(r),max(r),2.*max(r)/bins)
-    r_bin = np.arange(-2, 2, 4. / bins)
-    # Average mass surface density in radial bins:
-    m_binned_x = np.array([sum(dat['m'][(dat['x'] >= r_bin[i]) & (
-        dat['x'] < r_bin[i + 1])]) for i in range(0, len(r_bin) - 1)])
-    m_binned_y = np.array([sum(dat['m'][(dat['y'] >= r_bin[i]) & (
-        dat['y'] < r_bin[i + 1])]) for i in range(0, len(r_bin) - 1)])
-    m_binned_z = np.array([sum(dat['m'][(dat['z'] >= r_bin[i]) & (
-        dat['z'] < r_bin[i + 1])]) for i in range(0, len(r_bin) - 1)])
-    # Smooth out profiles a bit:
-    m_binned_x1 = lowess(m_binned_x, r_bin[0:len(
-        r_bin) - 1], frac=0.1, is_sorted=True, it=0)
-    m_binned_y1 = lowess(m_binned_y, r_bin[0:len(
-        r_bin) - 1], frac=0.1, is_sorted=True, it=0)
-    m_binned_z1 = lowess(m_binned_z, r_bin[0:len(
-        r_bin) - 1], frac=0.1, is_sorted=True, it=0)
-    # find max of distribution:
-    xpos = r_bin[np.argmax(m_binned_x1[:, 1])]
-    ypos = r_bin[np.argmax(m_binned_y1[:, 1])]
-    zpos = r_bin[np.argmax(m_binned_z1[:, 1])]
-    print('corrections: ', xpos, ypos, zpos)
-    # move original coordinates
-    simgas[pos] = simgas[pos] - [xpos, ypos, zpos]
-    simstar[pos] = simstar[pos] - [xpos, ypos, zpos]
-    simdm[pos] = simdm[pos] - [xpos, ypos, zpos]
-    r_bin = r_bin[0:len(r_bin) - 1]
-    if plot:
-        plt.figure(0)
-        plt.plot(r_bin, m_binned_x, 'r')
-        plt.plot(r_bin, m_binned_y, 'g')
-        plt.plot(r_bin, m_binned_z, 'b')
-        plt.plot(r_bin, m_binned_x1[:, 1], '--r')
-        plt.plot(r_bin, m_binned_y1[:, 1], '--g')
-        plt.plot(r_bin, m_binned_z1[:, 1], '--b')
-        # plt.plot([xpos,xpos],[0,1e10],'--r')
-        # plt.plot([ypos,ypos],[0,1e10],'--g')
-        # plt.plot([zpos,zpos],[0,1e10],'--b')
-        plt.xlabel('x (r) y (g) z (b) [kpc]')
-        plt.ylabel('accumulated stellar mass [M$_{\odot}$]')
-        plt.title('Centering in [x,y,z]')
-        plt.show(block=False)
-
-    print('Center all in velocity space (vx,vy,vz) (according to gas distribution)')
-    dat = simgas
-    # use gas to center galaxy in velocity space (as if observing)
-    ngrid = 1000
-    grid, vxd, vyd, vzd = ([0] * ngrid for i in range(4))
-    grid[0] = -600.
-    for i in range(1, len(grid)):
-        grid[i] = grid[i - 1] + 2 * (-grid[0]) / ngrid
-        vxd[i] = sum(dat.loc[dat.loc[:, 'vx'] < grid[i], 'm'])
-        vyd[i] = sum(dat.loc[dat.loc[:, 'vy'] < grid[i], 'm'])
-        vzd[i] = sum(dat.loc[dat.loc[:, 'vz'] < grid[i], 'm'])
-    # find the position where half of the mass has accumulated
-    vxpos = max(np.array(grid)[np.array(vxd) < max(vxd) / 2])
-    vypos = max(np.array(grid)[np.array(vyd) < max(vyd) / 2])
-    vzpos = max(np.array(grid)[np.array(vzd) < max(vzd) / 2])
-    # correct velocities
-    simgas[vpos] = simgas[vpos] - [vxpos, vypos, vzpos]
-    simstar[vpos] = simstar[vpos] - [vxpos, vypos, vzpos]
-    # simdm[vpos]      =   simdm[vpos]-[vxpos,vypos,vzpos]
-    print('corrections: ', vxpos, vypos, vzpos)
-
-
-    r = rad(simgas[pos], pos)
-    simgas = simgas[r < R_gal]
-    simgas = simgas.reset_index(drop=True)
-    r = rad(simstar[pos], pos)
-    simstar = simstar[r < R_gal]
-    simstar = simstar.reset_index(drop=True)
-    r = rad(simdm[pos], pos)
-    simdm = simdm[r < R_gal]
-    simdm = simdm.reset_index(drop=True)
-
-    # Make dataframe with global properties
-    M_star = sum(simstar['m'])
-    M_gas = sum(simgas['m'])
-    M_dm = sum(simdm['m'])
-    SFR = sum(simstar['m'].values[simstar['age'].values < 100]
-              ) / 100e6           # Msun/yr
-    SFRsd = SFR / (np.pi * R_gal**2.)
-
-    try:
-        Zsfr = sum(simgas['Z'] * simgas['SFR']) / sum(simgas['SFR'])
-    except ZeroDivisionError:
-        # SFR is too small
-        Zsfr = np.nan
-
-    # Print properties
-    sep = ['30', '10', '20', '40']
-    sep1 = '+%' + sep[0] + 's+%' + sep[1] + \
-        's+%' + sep[2] + 's+%' + sep[3] + 's+'
-    sep2 = '|%' + sep[0] + 's|%' + sep[1] + \
-        's|%' + sep[2] + 's|%' + sep[3] + 's|'
-    print(sep1 % ((int(sep[0]) * '-'), (int(sep[1]) * '-'),
-                  (int(sep[2]) * '-'), (int(sep[3]) * '-')))
-    print(sep2 % ('Parameter'.center(int(sep[0])), 'Value'.center(int(
-        sep[1])), 'Name in code'.center(int(sep[2])), 'Explanation'.center(int(sep[3]))))
-    print(sep1 % ((int(sep[0]) * '-'), (int(sep[1]) * '-'),
-                  (int(sep[2]) * '-'), (int(sep[3]) * '-')))
-    print(sep2 % ('Stellar mass [1e9 M_sun]'.center(int(sep[0])), str.format(
-        "{0:.3f}", M_star / 1e9), "prop['M_star']".center(int(sep[2])), 'Mass of all stellar particles'.center(int(sep[3]))))
-    print(sep2 % ('Gas mass [1e9 M_sun]'.center(int(sep[0])), str.format(
-        "{0:.3f}", M_gas / 1e9), "prop['M_gas']".center(int(sep[2])), 'Mass of all gas particles'.center(int(sep[3]))))
-    print(sep2 % ('SFR [M_sun/yr]'.center(int(sep[0])), str.format("{0:.3f}", SFR), "prop['SFR']".center(
-        int(sep[2])), 'SFR averaged over past 100 Myr'.center(int(sep[3]))))
-    print(sep2 % ('SFRd [M_sun/yr/kpc^2]'.center(int(sep[0])), str.format(
-        "{0:.4f}", SFRsd), "prop['SFRsd']".center(int(sep[2])), 'Surface density of SFR'.center(int(sep[3]))))
-    print(sep2 % ('Z [Z_sun]'.center(int(sep[0])), str.format("{0:.3f}", Zsfr), "prop['Z']".center(
-        int(sep[2])), 'Mass-weighted metallicity'.center(int(sep[3]))))
-    print(sep1 % ((int(sep[0]) * '-'), (int(sep[1]) * '-'),
-                  (int(sep[2]) * '-'), (int(sep[3]) * '-')))
-
-    # pdb.set_trace()
-    return simgas, simstar, simdm
-
-
 
 def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, startGAL=None, endGAL=None, debugplotgas=False, R_max=20.0,
     verbose=False, debug=False):
@@ -352,6 +219,7 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
     import numpy as np
     import pandas as pd
     import os
+    from readgadget import readsnap
 
     kpc2m = 3.085677580666e19
     resort = False
@@ -383,16 +251,24 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
         if num == 0:
             snap_hold = snap
             s, h, obj, ds, zred = define_ds(snap, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile)
+
+            # get H2 fraction from snapfile, instead of from YT sphere - faster way to weed out galaxies that are too small/with too few dense gas particles.
+            snapFile = raw_sim_dir + raw_sim_name_prefix + '{:0>3}'.format(int(snap)) + '.hdf5'
+            gfH2 = readsnap(snapFile,'fH2','gas')
+            gas_p_m = get_partmasses_from_snapshot(snapFile, obj, ptype='gas')
+
         else:
             if snap != snap_hold:
                 s, h, obj, ds, zred = define_ds(snap, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile)
                 snap_hold = snap
 
-        # if we have sorted galnames by 'snap', we have to do so for obj too.
+        # if we have sorted galnames by ('snap', SFR of each snap), we have to do so for obj too.
         if resort:
             gal = obj.galaxies
             obj.galaxies = [gal[i] for i in galnames.index.values]
 
+
+        # if we want to split up exection of this script into multiple nodes.
         if startGAL is None:
             startGAL = 0
         else:
@@ -402,6 +278,10 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
             endGAL = len(galnames.index)
         else:
             endGAL = int(endGAL)
+
+        assert startGAL < len(galnames.index)
+        assert endGAL <= len(galnames.index)
+        assert startGAL < endGAL
 
         if startGAL <= GAL < endGAL:
             print('\nNow looking at galaxy # %s with parent halo ID %s in snapshot %s at z = %s' % (
@@ -415,6 +295,20 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
             galaxy = obj.galaxies[GAL]
 
             # Exclude galaxies based on global properties to speed things up. TO BE IMPLEMENTED
+            if galaxy.sfr < 0.1:
+                print("SFR too low.. Skipping")
+                continue
+
+            galaxy_fH2 = np.array([gfh2[k] for k in obj.galaxies.glist])
+            assert len(galaxy_fH2) == len(galaxy.masses['gas'])
+            if (galaxy.masses['gas'] * galaxy_fH2).sum() <= 1.e5:
+                print ("Dense gas mass less than 10^5 Msun.. Skipping")
+                continue
+
+
+            if len(galaxy.slist) < 64 or len(galaxy.glist) < 64:
+                print("Too few star particles or gas particles, unlikely to be real galaxy or useful for our purpose")
+                continue
 
             if galaxy.masses['gas'] == 0.0 or galaxy.masses['stellar'] == 0.0:
                 # then don't bother getting any info on this galaxy
@@ -613,9 +507,6 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
                     simdm = pd.DataFrame({'x': dm_posx, 'y': dm_posy, 'z': dm_posz,
                                           'vx': dm_velx, 'vy': dm_vely, 'vz': dm_velz, 'm': dm_m})
 
-                    # Center in position and velocity
-                    simgas, simstar, simdm = center_cut_galaxy(
-                        simgas, simstar, simdm, plot=False)
 
                     # Calculate approximate 100 Myr average of SFR for this galaxy
                     m_star = simstar['m'].values
@@ -711,6 +602,7 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
 
                             ppp.save(os.path.join(savepath, filename))
 
+                    continue
             else:
                 print("Skipping... Already extracted...")
 
@@ -720,7 +612,7 @@ def simba_to_pd(galnames, raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_pre
     return galnames_selected, zreds_selected
 
 
-def pd_bookkeeping(galnames_selected, zreds_selected, zCloudy):
+def pd_bookkeeping(galnames_selected, zreds_selected, zCloudy, outname=None):
     try:
         import cPickle
     except:
@@ -728,8 +620,10 @@ def pd_bookkeeping(galnames_selected, zreds_selected, zCloudy):
     import os
     models = {'galnames_unsorted': galnames_selected,
               'zreds_unsorted': zreds_selected}
-    # call by global_results.py
-    outname = '/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals'
+
+    if outname is None:
+        # call by global_results.py
+        outname = '/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals'
     if os.path.exists(outname):     # make a back up copy if exist
         os.system('mv ' + outname + ' ' + outname + '.bak')
     cPickle.dump(models, open(outname, 'wb'))
@@ -766,13 +660,11 @@ def hack_galNames(pdPath):
 
     import glob, os
     gasF = glob.glob(pdPath + "*.gas")
-    gasF = map(os.path.basename, gasF)
+    gasF = [os.path.basename(ii) for ii in gasF]
 
     zreds_selected = [float(ii[1:5]) for ii in gasF]
-    print(zreds_selected)
 
     galnames_selected = [ii[6:ii.find('_sim')] for ii in gasF]
-    print(galnames_selected)
 
     return galnames_selected, zreds_selected
 

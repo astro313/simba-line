@@ -599,9 +599,9 @@ class particles2pd(object):
                                   'm': dm_m})
 
 
-            from parse_simba import center_cut_galaxy
-            simgas, simstar, simdm = center_cut_galaxy(simgas, simstar, simdm, plot=False)
-            import pdb; pdb.set_trace()
+            # from parse_simba import center_cut_galaxy
+            # simgas, simstar, simdm = center_cut_galaxy(simgas, simstar, simdm, plot=False)
+            # import pdb; pdb.set_trace()
 
 
             simgas.to_pickle(simgas_path)
