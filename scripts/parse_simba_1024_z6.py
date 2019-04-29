@@ -4,24 +4,20 @@ getting all z~6 galaxies in the 1024 sims, from the 25 cMpc/h box, but they seem
 
 """
 
-try:
-    import cPickle as pickle
-except:
-    import _pickle as pickle     # py3
-try:
-    from parse import *
-except:
-    from parse_simba import *
+import sys
+if sys.version_info[0] < 3:
+    raise Exception("Python 3 or a more recent version is required.")
+
+import _pickle as pickle     # py3
+from parse_simba import *
 import socket
 import os
-import sys
 
 if len(sys.argv) > 1:
     debug = sys.argv[1]
 else:
     debug = False
 
-print("Extracting galaxies from z6 ONLY, for now.. we may need to extract galaxies from other redshift.... But hopefully we don't have to")
 snapRange = [36]    # don't put 036!
 zCloudy = 6
 raw_sim_name_prefix = 'snap_m25n1024_'
@@ -39,16 +35,12 @@ elif 'flatironinstitute.org' or 'worker' in host:
     redshiftFile = '/mnt/ceph/users/daisyleung/simba/gizmo-extra/outputs_boxspace50.info'
     d_data = '/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/z' + str(int(zCloudy)) + '_data_files/'
 
-# this doesn't affect ouput, just for inspection
-# Nhalo = 10
-# Ngalaxies = 10
-# total_Ngal = get_basic_info_from_caesarCat(snapRange, Nhalo, Ngalaxies, caesar_dir, name_prefix)
-
+# Nhalo and Ngalaxies below don't affect the ouput, just for inspection
+# total_Ngal = get_basic_info_from_caesarCat(snapRange, Nhalo=10, Ngalaxies=10, caesar_dir, name_prefix)
 # print "Using all galaxies found from the Caesar catalog"
 # print total_Ngal
-# Ngalaxies = total_Ngal
 
-# ggg = select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Ngalaxies, saveggg='ggg.pkl')
+# ggg = select_SFgal_from_simba(raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, snapRange, Ngalaxies=total_Ngal, saveggg='ggg.pkl')
 
 galnames, zred = simba_to_pd('ggg.pkl', raw_sim_dir, raw_sim_name_prefix, caesar_dir, name_prefix, redshiftFile, d_data, debug=debug, startGAL=None, endGAL=None)
 
