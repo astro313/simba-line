@@ -7,7 +7,11 @@ extract global properties of galaxies (the entire samples) and then plot them.
 
 import caesar
 import numpy as np
-import cPickle as pickle
+try:
+    import cPickle as pickle
+except ModuleNotFoundError:
+    import _pickle as pickle
+
 import socket
 import os
 import sys
@@ -29,7 +33,10 @@ def info(obj, snapFile, top=None, savetxt=False):
     group_list = obj.galaxies
     nobjs = len(group_list)
 
-    if top > nobjs or top is None:
+    if top is None:
+        top = nobjs
+
+    elif top > nobjs:
         top = nobjs
 
     if obj.simulation.cosmological_simulation:
@@ -46,7 +53,7 @@ def info(obj, snapFile, top=None, savetxt=False):
 
     cnt = 1
 
-    output += '## ID      Mstar     Mgas      MBH    fedd    SFR [Msun/yr]      SFRSD [Msun/yr/kpc^2]    SFRSD_r_stellar_half_mass [Msun/yr/kpc^2]    gasSD [Msun/pc^2]    r_baryon   r_gas      r_gas_half_mass      r_stellar    r_stellar_half_mass    Z_sfrWeighted [/Zsun]    Z_massWeighted [/Zsun]     Z_stellar [/Zsun]     T_gas_massWeighted    T_gas_SFRWeighted   fgas   nrho      Central\t|  Mhalo_parent     HID\n'
+    output += '## ID      Mstar     Mgas      MBH    fedd    SFR [Msun/yr]      SFRSD [Msun/yr/kpc^2]    SFRSD_r_stellar_half_mass [Msun/yr/kpc^2]    gasSD [Msun/pc^2]    r_baryon   r_gas      r_gas_half_mass      r_stellar    r_stellar_half_mass    Z_sfrWeighted [/Zsun]    Z_massWeighted [/Zsun]     Z_stellar [/Zsun]     T_gas_massWeighted    T_gas_SFRWeighted   fgas    DGR   nrho      Central\t|  Mhalo_parent     HID\n'
     output += '## ----------------------------------------------------------------------------------------\n'
 
     h = obj.simulation.hubble_constant
@@ -83,7 +90,7 @@ def info(obj, snapFile, top=None, savetxt=False):
         # print bm, fedd
         # import pdb; pdb.set_trace()
 
-        output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e   %0.3f   %0.3f  %0.3f  %0.2e  %0.2e  %0.3f  %0.2e  %s\t|  %0.2e  %d \n' % \
+        output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e   %0.3f   %0.3f  %0.3f  %0.2e  %0.2e  %0.3f  %0.2e  %.2e  %s\t|  %0.2e  %d \n' % \
                   (o.GroupID, o.masses['stellar'], o.masses['gas'],
                    bm,
                    fedd,
@@ -102,6 +109,7 @@ def info(obj, snapFile, top=None, savetxt=False):
                    o.temperatures['mass_weighted'],
                    o.temperatures['sfr_weighted'],
                    o.gas_fraction,      # = Mgas / (Mg + Ms)
+                   o.masses['gas']/o.masses['dust'],
                    o.local_number_density, o.central,
                    phm, phid)
 
@@ -287,61 +295,7 @@ def plot_info(colNumx, colNumy, inFile,
 
     # literature SK
     if "gassd" in xlabel.lower() and "sfrsd" in ylabel.lower():
-        litpath = './literature/'
-
-        x, y = [10**0.50, 10**4.0], [10**(-2.85), 10**2.1]
-        ax.plot(x, y, linestyle='-', color='b',
-                linewidth=2, label="Kennicutt 1998")
-
-        # more from high-z literature
-        x0901, y0901 = np.loadtxt(
-            litpath + "J0901_KS10_points.txt", unpack=True)  # in log
-        x14011, y14011 = np.loadtxt(
-            litpath + "J14011_KSpoints2.txt", unpack=True)  # not in log
-        xrawle, yrawle = np.loadtxt(
-            litpath + "Rawle_KSpoints.txt", unpack=True, usecols=(0, 1))  # in log
-        xgn20, xgn20err, ygn20, ygn20err = np.loadtxt(
-            litpath + "Hodge_resolvedKS.txt", unpack=True)   # not in log
-        xegs, xegserr, yegs, yegserr = np.loadtxt(
-            litpath + "Genzel_KSpoints.txt", unpack=True)  # in log
-
-        ax.scatter(10**x0901, 10**y0901, label="J0901 @ z=2.26",
-                   color='gray', marker='o', s=5, facecolors='none', alpha=0.6)
-        ax.scatter(x14011, y14011, label="SMM J14011 @ z=2.56",
-                   color='darkblue', marker='^', s=13, facecolors='none', alpha=0.8)
-        ax.scatter(10**xrawle, 10**yrawle, label="HLS0918 @ z=5.24",
-                   color='purple', marker='v', s=10, facecolors='none', alpha=0.8)
-        ax.errorbar(xgn20, ygn20, yerr=ygn20err, xerr=xgn20err,
-                    label="GN20 @ z=4.05",
-                    color='orange', fmt='s', markersize=4.5,
-                    markeredgewidth=0.6, mfc='none', elinewidth=0.5)
-        ax.errorbar(10**xegs, 10**yegs, yerr=yegserr, xerr=xegserr,
-                    label="EGS13011166 @ z=1.53",
-                    color='green', fmt='D', markersize=3.5,
-                    markeredgewidth=0.6, mfc='none', zorder=0.5, alpha=0.56, elinewidth=0.5)
-
-        # Leung19
-        ax.errorbar(590, 10, xerr=410,
-                    label='HXMM05 (global) @ z=2.99',
-                    color='red',
-                    fmt='*',
-                    markersize=8,
-                    markeredgewidth=0.8, mfc='red', zorder=100, alpha=0.9,
-                    elinewidth=0.5)
-
-        # Riechers17
-        ax.errorbar([7.3e10/(1.e3)**2, 8.1e10/(1.e3)**2], [730, 750],
-                    label='ADFS-27 @ z=5.66',
-                    color='darkred',
-                    fmt='x',
-                    markersize=4.5,
-                    markeredgewidth=0.8, mfc='none', zorder=0.85, alpha=0.56,
-                    elinewidth=0.5)
-
-        box = ax.get_position()
-        ax.set_position([box.x0, box.y0 + 0.25, box.width, box.height*0.8])
-        ax.legend(loc="upper center", ncol=4, fontsize=9,
-                   bbox_to_anchor=(0.5, 1.25), markerscale=3)
+        fig, ax = plot_literature_SK(ax)
 
     if not saveFig:
         plt.show(block=False)
@@ -369,8 +323,66 @@ def plot_info(colNumx, colNumy, inFile,
     return fig, ax
 
 
-def plot_literature_SK():
+def plot_literature_SK(ax, litpath='./literature/'):
+
+    import numpy as np
+
+    x, y = [10**0.50, 10**4.0], [10**(-2.85), 10**2.1]
+    ax.plot(x, y, linestyle='-', color='b',
+            linewidth=2, label="Kennicutt 1998")
+
+    # more from high-z literature
+    x0901, y0901 = np.loadtxt(
+        litpath + "J0901_KS10_points.txt", unpack=True)  # in log
+    x14011, y14011 = np.loadtxt(
+        litpath + "J14011_KSpoints2.txt", unpack=True)  # not in log
+    xrawle, yrawle = np.loadtxt(
+        litpath + "Rawle_KSpoints.txt", unpack=True, usecols=(0, 1))  # in log
+    xgn20, xgn20err, ygn20, ygn20err = np.loadtxt(
+        litpath + "Hodge_resolvedKS.txt", unpack=True)   # not in log
+    xegs, xegserr, yegs, yegserr = np.loadtxt(
+        litpath + "Genzel_KSpoints.txt", unpack=True)  # in log
+
+    ax.scatter(10**x0901, 10**y0901, label="J0901 @ z=2.26",
+               color='gray', marker='o', s=5, facecolors='none', alpha=0.6)
+    ax.scatter(x14011, y14011, label="SMM J14011 @ z=2.56",
+               color='darkblue', marker='^', s=13, facecolors='none', alpha=0.8)
+    ax.scatter(10**xrawle, 10**yrawle, label="HLS0918 @ z=5.24",
+               color='purple', marker='v', s=10, facecolors='none', alpha=0.8)
+    ax.errorbar(xgn20, ygn20, yerr=ygn20err, xerr=xgn20err,
+                label="GN20 @ z=4.05",
+                color='orange', fmt='s', markersize=4.5,
+                markeredgewidth=0.6, mfc='none', elinewidth=0.5)
+    ax.errorbar(10**xegs, 10**yegs, yerr=yegserr, xerr=xegserr,
+                label="EGS13011166 @ z=1.53",
+                color='green', fmt='D', markersize=3.5,
+                markeredgewidth=0.6, mfc='none', zorder=0.5, alpha=0.56, elinewidth=0.5)
+
+    # Leung19
+    ax.errorbar(590, 10, xerr=410,
+                label='HXMM05 (global) @ z=2.99',
+                color='red',
+                fmt='*',
+                markersize=8,
+                markeredgewidth=0.8, mfc='red', zorder=100, alpha=0.9,
+                elinewidth=0.5)
+
+    # Riechers17
+    ax.errorbar([7.3e10/(1.e3)**2, 8.1e10/(1.e3)**2], [730, 750],
+                label='ADFS-27 @ z=5.66',
+                color='darkred',
+                fmt='x',
+                markersize=4.5,
+                markeredgewidth=0.8, mfc='none', zorder=0.85, alpha=0.56,
+                elinewidth=0.5)
+
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0 + 0.25, box.width, box.height*0.8])
+    ax.legend(loc="upper center", ncol=4, fontsize=9,
+               bbox_to_anchor=(0.5, 1.25), markerscale=3)
     return fig, ax
+
+
 
 
 if __name__ == '__main__':
@@ -411,65 +423,63 @@ if __name__ == '__main__':
     output, outName = info(obj, snapFile, top=None, savetxt=True)
     savedir='../plots/' + str(outName[:outName.find('.txt')]) + '/'
 
-    fig, ax = plot_info(22+1, 1, inFile=outName, colNumz=19, zlabel='fgas',
-                        xlabel='Mhalo', ylabel='Mstar', logz=False,
+    # fig, ax = plot_info(23+1, 1, inFile=outName, colNumz=19, zlabel='fgas',
+    #                     xlabel='Mhalo', ylabel='Mstar', logz=False,
+    #                     savedir=savedir)
+
+    # fig, ax = plot_info(2, 1, inFile=outName, colNumz=3, xlabel='Mgas', \
+    #                     ylabel='Mstar', zlabel='MBH', savedir=savedir)
+
+    # fig, ax = plot_info(2, 1, inFile=outName, colNumz=5, xlabel='Mgas', \
+    #                     ylabel='Mstar', zlabel='SFR',
+    #                     savedir=savedir)
+
+    # fig, ax = plot_info(1, 5, inFile=outName, xlabel='Mstar', ylabel='SFR',
+    #                     ythreshold=0.1,
+    #                     savedir=savedir)
+
+    # # MZR:
+    # fig, ax = plot_info(1, 16, inFile=outName, colNumz=14, xlabel='Mstar', \
+    #                 ylabel='Zstellar',
+    #                 logy=False,
+    #                 zlabel='Zgas', logz=False,
+    #                 savedir=savedir)
+
+    # fig, ax = plot_info(1, 14, inFile=outName, colNumz=19, xlabel='Mstar', \
+    #                 ylabel='Zgas', ythreshold=0.0,
+    #                 logy=False,
+    #                 zlabel='fgas', logz=False, savedir=savedir)
+
+    # # FMR: SFR - Z - M*
+    # fig, ax = plot_info(5, 14, inFile=outName, colNumz=1, xlabel='SFR', \
+    #                 xthreshold=0.1,     # select SFR > 0.1
+    #                 logy=False,
+    #                 ylabel='Zgas', ythreshold=0.0,
+    #                 zlabel='Mstar', savedir=savedir)
+
+    # # SFR f_gas
+    # fig, ax = plot_info(5, 19, inFile=outName, colNumz=1, xlabel='SFR', \
+    #                 xthreshold=0.1,
+    #                 ylabel='fgas', logy=False, zlabel='Mstar', savedir=savedir)
+
+    # fig, ax = plot_info(6, 19, inFile=outName, colNumz=9,
+    #                 xlabel='SFRSD [Msun/pc2]',
+    #                 xthreshold=0.0,
+    #                 ylabel='fgas', logy=False, zlabel='Rbaryon [kpc]',
+    #                 logz=False, savedir=savedir)
+
+    # # SFRSD - GasSD
+    # fig, ax = plot_info(8, 6, inFile=outName, colNumz=9,
+    #                     xlabel='gasSD [Msun/pc2]', xthreshold=0.0,
+    #                     ylabel='SFRSD [Msun/yr/kpc2]', ythreshold=0.0,
+    #                     zlabel='Rbaryon [kpc]',
+    #                     logz=False,
+    #                     savedir=savedir)
+
+    # Z - DGR
+    fig, ax = plot_info(20, 14, inFile=outName,
+                        xlabel='GDR', xthreshold=0.0,
+                        ylabel='Zgas', ythreshold=0.0,
                         savedir=savedir)
 
-    fig, ax = plot_info(2, 1, inFile=outName, colNumz=3, xlabel='Mgas', \
-                        ylabel='Mstar', zlabel='MBH', savedir=savedir)
-
-    fig, ax = plot_info(2, 1, inFile=outName, colNumz=5, xlabel='Mgas', \
-                        ylabel='Mstar', zlabel='SFR',
-                        savedir=savedir)
-
-    fig, ax = plot_info(1, 5, inFile=outName, xlabel='Mstar', ylabel='SFR',
-                        ythreshold=0.1,
-                        savedir=savedir)
-
-    # MZR:
-    fig, ax = plot_info(1, 16, inFile=outName, colNumz=14, xlabel='Mstar', \
-                    ylabel='Zstellar',
-                    logy=False,
-                    zlabel='Zgas', logz=False,
-                    savedir=savedir)
-
-    fig, ax = plot_info(1, 14, inFile=outName, colNumz=19, xlabel='Mstar', \
-                    ylabel='Zgas', ythreshold=0.0,
-                    logy=False,
-                    zlabel='fgas', logz=False, savedir=savedir)
-
-    # FMR: SFR - Z - M*
-    fig, ax = plot_info(5, 14, inFile=outName, colNumz=1, xlabel='SFR', \
-                    xthreshold=0.1,     # select SFR > 0.1
-                    logy=False,
-                    ylabel='Zgas', ythreshold=0.0,
-                    zlabel='Mstar', savedir=savedir)
-
-    # SFR f_gas
-    fig, ax = plot_info(5, 19, inFile=outName, colNumz=1, xlabel='SFR', \
-                    xthreshold=0.1,
-                    ylabel='fgas', logy=False, zlabel='Mstar', savedir=savedir)
-
-    fig, ax = plot_info(6, 19, inFile=outName, colNumz=9,
-                    xlabel='SFRSD [Msun/pc2]',
-                    xthreshold=0.0,
-                    ylabel='fgas', logy=False, zlabel='Rbaryon [kpc]',
-                    logz=False, savedir=savedir)
-
-    # SFRSD - GasSD
-    fig, ax = plot_info(8, 6, inFile=outName, colNumz=9,
-                        xlabel='gasSD [Msun/pc2]', xthreshold=0.0,
-                        ylabel='SFRSD [Msun/yr/kpc2]', ythreshold=0.0,
-                        zlabel='Rbaryon [kpc]',
-                        logz=False,
-                        savedir=savedir)
-
-    # SFRSD_stellar half mass R - GasSD
-    fig, ax = plot_info(8, 7, inFile=outName, colNumz=9,
-                        xlabel='gasSD [Msun/pc2]', xthreshold=0.0,
-                        ylabel='SFRSDrstellarhalfmass [Msun/yr/kpc2]',
-                        ythreshold=0.0,
-                        zlabel='Rbaryon [kpc]',
-                        logz=False,
-                        savedir=savedir)
 
