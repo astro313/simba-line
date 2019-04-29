@@ -423,58 +423,58 @@ if __name__ == '__main__':
     output, outName = info(obj, snapFile, top=None, savetxt=True)
     savedir='../plots/' + str(outName[:outName.find('.txt')]) + '/'
 
-    # fig, ax = plot_info(23+1, 1, inFile=outName, colNumz=19, zlabel='fgas',
-    #                     xlabel='Mhalo', ylabel='Mstar', logz=False,
-    #                     savedir=savedir)
+    fig, ax = plot_info(23+1, 1, inFile=outName, colNumz=19, zlabel='fgas',
+                        xlabel='Mhalo', ylabel='Mstar', logz=False,
+                        savedir=savedir)
 
-    # fig, ax = plot_info(2, 1, inFile=outName, colNumz=3, xlabel='Mgas', \
-    #                     ylabel='Mstar', zlabel='MBH', savedir=savedir)
+    fig, ax = plot_info(2, 1, inFile=outName, colNumz=3, xlabel='Mgas', \
+                        ylabel='Mstar', zlabel='MBH', savedir=savedir)
 
-    # fig, ax = plot_info(2, 1, inFile=outName, colNumz=5, xlabel='Mgas', \
-    #                     ylabel='Mstar', zlabel='SFR',
-    #                     savedir=savedir)
+    fig, ax = plot_info(2, 1, inFile=outName, colNumz=5, xlabel='Mgas', \
+                        ylabel='Mstar', zlabel='SFR',
+                        savedir=savedir)
 
-    # fig, ax = plot_info(1, 5, inFile=outName, xlabel='Mstar', ylabel='SFR',
-    #                     ythreshold=0.1,
-    #                     savedir=savedir)
+    fig, ax = plot_info(1, 5, inFile=outName, xlabel='Mstar', ylabel='SFR',
+                        ythreshold=0.1,
+                        savedir=savedir)
 
-    # # MZR:
-    # fig, ax = plot_info(1, 16, inFile=outName, colNumz=14, xlabel='Mstar', \
-    #                 ylabel='Zstellar',
-    #                 logy=False,
-    #                 zlabel='Zgas', logz=False,
-    #                 savedir=savedir)
+    # MZR:
+    fig, ax = plot_info(1, 16, inFile=outName, colNumz=14, xlabel='Mstar', \
+                    ylabel='Zstellar',
+                    logy=False,
+                    zlabel='Zgas', logz=False,
+                    savedir=savedir)
 
-    # fig, ax = plot_info(1, 14, inFile=outName, colNumz=19, xlabel='Mstar', \
-    #                 ylabel='Zgas', ythreshold=0.0,
-    #                 logy=False,
-    #                 zlabel='fgas', logz=False, savedir=savedir)
+    fig, ax = plot_info(1, 14, inFile=outName, colNumz=19, xlabel='Mstar', \
+                    ylabel='Zgas', ythreshold=0.0,
+                    logy=False,
+                    zlabel='fgas', logz=False, savedir=savedir)
 
-    # # FMR: SFR - Z - M*
-    # fig, ax = plot_info(5, 14, inFile=outName, colNumz=1, xlabel='SFR', \
-    #                 xthreshold=0.1,     # select SFR > 0.1
-    #                 logy=False,
-    #                 ylabel='Zgas', ythreshold=0.0,
-    #                 zlabel='Mstar', savedir=savedir)
+    # FMR: SFR - Z - M*
+    fig, ax = plot_info(5, 14, inFile=outName, colNumz=1, xlabel='SFR', \
+                    xthreshold=0.1,     # select SFR > 0.1
+                    logy=False,
+                    ylabel='Zgas', ythreshold=0.0,
+                    zlabel='Mstar', savedir=savedir)
 
-    # # SFR f_gas
-    # fig, ax = plot_info(5, 19, inFile=outName, colNumz=1, xlabel='SFR', \
-    #                 xthreshold=0.1,
-    #                 ylabel='fgas', logy=False, zlabel='Mstar', savedir=savedir)
+    # SFR f_gas
+    fig, ax = plot_info(5, 19, inFile=outName, colNumz=1, xlabel='SFR', \
+                    xthreshold=0.1,
+                    ylabel='fgas', logy=False, zlabel='Mstar', savedir=savedir)
 
-    # fig, ax = plot_info(6, 19, inFile=outName, colNumz=9,
-    #                 xlabel='SFRSD [Msun/pc2]',
-    #                 xthreshold=0.0,
-    #                 ylabel='fgas', logy=False, zlabel='Rbaryon [kpc]',
-    #                 logz=False, savedir=savedir)
+    fig, ax = plot_info(6, 19, inFile=outName, colNumz=9,
+                    xlabel='SFRSD [Msun/pc2]',
+                    xthreshold=0.0,
+                    ylabel='fgas', logy=False, zlabel='Rbaryon [kpc]',
+                    logz=False, savedir=savedir)
 
-    # # SFRSD - GasSD
-    # fig, ax = plot_info(8, 6, inFile=outName, colNumz=9,
-    #                     xlabel='gasSD [Msun/pc2]', xthreshold=0.0,
-    #                     ylabel='SFRSD [Msun/yr/kpc2]', ythreshold=0.0,
-    #                     zlabel='Rbaryon [kpc]',
-    #                     logz=False,
-    #                     savedir=savedir)
+    # SFRSD - GasSD
+    fig, ax = plot_info(8, 6, inFile=outName, colNumz=9,
+                        xlabel='gasSD [Msun/pc2]', xthreshold=0.0,
+                        ylabel='SFRSD [Msun/yr/kpc2]', ythreshold=0.0,
+                        zlabel='Rbaryon [kpc]',
+                        logz=False,
+                        savedir=savedir)
 
     # Z - DGR
     fig, ax = plot_info(20, 14, inFile=outName,
