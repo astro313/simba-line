@@ -261,7 +261,7 @@ class particles2pd(object):
                 zzz.extend(zzzRed)
 
         from parse_simba import pd_bookkeeping
-        _, _ = pd_bookkeeping(ganmes, zzz, self.zCloudy, outname=outname)
+        _, _ = pd_bookkeeping(gnames, zzz, self.zCloudy, outname=outname)
 
         return gnames, zzz
 
@@ -616,7 +616,9 @@ class particles2pd(object):
 
 if __name__ == '__main__':
 
-    pp = particles2pd(snapRange=[36],name_prefix='m25n1024_', feedback='s50/', zCloudy=6, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
+    # m25n1024, 's50_new/'
+
+    pp = particles2pd(snapRange=[36],name_prefix='m50n1024_', feedback='s50/', zCloudy=6, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
 
     ggg, zred = pp.run(savepath='xxx/', outname=None, emptyDM=True, caesarRotate=False)
     print(ggg)
