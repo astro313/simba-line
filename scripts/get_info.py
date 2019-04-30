@@ -30,6 +30,8 @@ def info(obj, snapFile, top=None, savetxt=False):
 
     """
 
+    from readgadget import readsnap
+    from yt2caesar import group_part_by_galaxy, get_partmasses_from_snapshot
 
     group_list = obj.galaxies[:]
     nobjs = len(group_list)
@@ -54,7 +56,12 @@ def info(obj, snapFile, top=None, savetxt=False):
 
     cnt = 1
 
-    output += '## ID      Mstar     Mgas      MBH    fedd    SFR [Msun/yr]      SFRSD [Msun/yr/kpc^2]    SFRSD_r_stellar_half_mass [Msun/yr/kpc^2]    gasSD [Msun/pc^2]    r_baryon   r_gas      r_gas_half_mass      r_stellar    r_stellar_half_mass    Z_sfrWeighted [/Zsun]    Z_massWeighted [/Zsun]     Z_stellar [/Zsun]     T_gas_massWeighted    T_gas_SFRWeighted   fgas    DGR   nrho      Central\t|  Mhalo_parent     HID\n'
+    # get molecular gas fraction of each particle from snapshot file
+    gfH2_p = readsnap(snapFile,'fH2','gas', units=1)
+    gas_p_m = get_partmasses_from_snapshot(snapFile, obj, ptype='gas')
+
+
+    output += '## ID      Mstar     Mgas      MBH    fedd    SFR [Msun/yr]      SFRSD [Msun/yr/kpc^2]    SFRSD_r_stellar_half_mass [Msun/yr/kpc^2]    gasSD [Msun/pc^2]    r_baryon   r_gas      r_gas_half_mass      r_stellar    r_stellar_half_mass    Z_sfrWeighted [/Zsun]    Z_massWeighted [/Zsun]     Z_stellar [/Zsun]     T_gas_massWeighted    T_gas_SFRWeighted   fgas    f_h2_fromSnap   DGR   nrho      Central\t|  Mhalo_parent     HID\n'
     output += '## ----------------------------------------------------------------------------------------\n'
 
     h = obj.simulation.hubble_constant
@@ -91,7 +98,11 @@ def info(obj, snapFile, top=None, savetxt=False):
         # print bm, fedd
         # import pdb; pdb.set_trace()
 
-        output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e   %0.3f   %0.3f  %0.3f  %0.2e  %0.2e  %0.3f  %0.2e  %.2e  %s\t|  %0.2e  %d \n' % \
+        # Calculate mass-weighted f_h2 of each gal
+        gas_f_H2 = group_part_by_galaxy(gfH2_p, o, ptype='gas')
+        gas_m = group_part_by_galaxy(gas_p_m, o, ptype='gas')
+
+        output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e   %0.3f   %0.3f  %0.3f  %0.2e  %0.2e  %0.3f  %0.2e  %.2e  %.2e  %s\t|  %0.2e  %d \n' % \
                   (o.GroupID, o.masses['stellar'], o.masses['gas'],
                    bm,
                    fedd,
@@ -110,6 +121,7 @@ def info(obj, snapFile, top=None, savetxt=False):
                    o.temperatures['mass_weighted'],
                    o.temperatures['sfr_weighted'],
                    o.gas_fraction,      # = Mgas / (Mg + Ms)
+                   np.sum(gas_f_H2 * gas_m)/np.sum(gas_m),    # mass-weighted f_h2
                    o.masses['gas']/o.masses['dust'],
                    o.local_number_density, o.central,
                    phm, phid)
@@ -117,7 +129,7 @@ def info(obj, snapFile, top=None, savetxt=False):
         cnt += 1
         if cnt > top: break
 
-    print(output)
+    # print(output)
 
     if savetxt:
 
@@ -328,7 +340,7 @@ def plot_info(colNumx, colNumy, inFile,
 
     # literature SK
     if "gassd" in xlabel.lower() and "sfrsd" in ylabel.lower():
-        fig, ax = plot_literature_SK(ax)
+        fig, ax = plot_literature_SK(fig, ax)
 
     if not saveFig:
         plt.show(block=False)
@@ -356,7 +368,7 @@ def plot_info(colNumx, colNumy, inFile,
     return fig, ax
 
 
-def plot_literature_SK(ax, litpath='./literature/'):
+def plot_literature_SK(fig, ax, litpath='./literature/'):
 
     import numpy as np
 
@@ -496,9 +508,16 @@ def make_fundamental_plots(outName, savedir):
         directory to save plots
 
     """
-    fig, ax = plot_info(23+1, 1, inFile=outName, colNumz=19, zlabel='fgas',
+    # f_gas
+    fig, ax = plot_info(24+1, 1, inFile=outName, colNumz=19, zlabel='fgas',
                         xlabel='Mhalo', ylabel='Mstar', logz=False,
                         savedir=savedir)
+
+    # f_h2
+    fig, ax = plot_info(24+1, 1, inFile=outName, colNumz=20, zlabel='fh2',
+                        xlabel='Mhalo', ylabel='Mstar', logz=False,
+                        savedir=savedir)
+
 
     fig, ax = plot_info(2, 1, inFile=outName, colNumz=3, xlabel='Mgas', \
                         ylabel='Mstar', zlabel='MBH', savedir=savedir)
@@ -535,11 +554,23 @@ def make_fundamental_plots(outName, savedir):
                     xthreshold=0.1,
                     ylabel='fgas', logy=False, zlabel='Mstar', savedir=savedir)
 
+    # f_h2
+    fig, ax = plot_info(5, 20, inFile=outName, colNumz=1, xlabel='SFR', \
+                    xthreshold=0.1,
+                    ylabel='fh2', logy=False, zlabel='Mstar', savedir=savedir)
+
     fig, ax = plot_info(6, 19, inFile=outName, colNumz=9,
                     xlabel='SFRSD [Msun/pc2]',
                     xthreshold=0.0,
                     ylabel='fgas', logy=False, zlabel='Rbaryon [kpc]',
                     logz=False, savedir=savedir)
+    # fh2
+    fig, ax = plot_info(6, 20, inFile=outName, colNumz=9,
+                    xlabel='SFRSD [Msun/pc2]',
+                    xthreshold=0.0,
+                    ylabel='fh2', logy=False, zlabel='Rbaryon [kpc]',
+                    logz=False, savedir=savedir)
+
 
     # SFRSD - GasSD
     fig, ax = plot_info(8, 6, inFile=outName, colNumz=9,
@@ -550,7 +581,7 @@ def make_fundamental_plots(outName, savedir):
                         savedir=savedir)
 
     # Z - DGR
-    fig, ax = plot_info(20, 14, inFile=outName,
+    fig, ax = plot_info(21, 14, inFile=outName,
                         xlabel='GDR', xthreshold=0.0,
                         ylabel='Zgas', ythreshold=0.0,
                         savedir=savedir)
@@ -567,8 +598,10 @@ if __name__ == '__main__':
 
     snapRange = [36]    # don't put 036
     zCloudy = 6
-    combineBoxes = True
+    combineBoxes = False
     box = '50'
+
+    # make_fundamental_plots('snap_m50n1024_036_top12280.txt', '../plots/snap_m50n1024_036_top12280/')
 
     if combineBoxes:
         outName = 'm25m50n1024_036.txt'
