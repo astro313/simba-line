@@ -30,7 +30,8 @@ def info(obj, snapFile, top=None, savetxt=False):
 
     """
 
-    group_list = obj.galaxies
+
+    group_list = obj.galaxies[:]
     nobjs = len(group_list)
 
     if top is None:
@@ -120,12 +121,44 @@ def info(obj, snapFile, top=None, savetxt=False):
 
     if savetxt:
 
-        outputFileName = snapFile[50:-5] + '_top' + str(top) + '.txt'
+        outputFileName = aux_filename(snapFile, top)
         f = open(outputFileName, 'w')
         f.write(output)
         f.close()
 
     return output, outputFileName
+
+
+def aux_filename(snapFile, top):
+    return snapFile[50:-5] + '_top' + str(top) + '.txt'
+
+
+def combine_galinfo_from_boxes(files, outName):
+    """
+
+    combine the columns from mutliple files created w/ info()
+
+
+    Parameters
+    ----------
+    files: list of str
+        filenames in .txt from info()
+
+    outName: str
+        filename of the output file
+
+    """
+
+    for i in files:
+        if i == files[0]:
+            xx = np.genfromtxt(i)
+        else:
+            xx = np.vstack([xx, np.genfromtxt(i)])
+
+    f = open(outName, 'w')
+    f.write(xx)
+    f.close()
+
 
 
 def setup_cmap(cm='magma'):    # "plasma_r"
@@ -383,46 +416,86 @@ def plot_literature_SK(ax, litpath='./literature/'):
     return fig, ax
 
 
+def setup_paths(box):
+    """
 
+    box: str
+        '25' or '50'
 
-if __name__ == '__main__':
+    """
+    import socket
 
-    if len(sys.argv) > 1:
-        debug = sys.argv[1]
-        LoadHalo = False
-    else:
-        debug = False
-        LoadHalo = True
-
-    snapRange = [36]    # don't put 036
-    zCloudy = 6
-    raw_sim_name_prefix = 'snap_m25n1024_'
-    name_prefix = 'm25n1024_'
+    if box == '25':
+        raw_sim_name_prefix = 'snap_m25n1024_'
+        name_prefix = 'm25n1024_'
+    elif box == '50':
+        raw_sim_name_prefix = 'snap_m50n1024_'
+        name_prefix = 'm50n1024_'
 
     host = socket.gethostname()
     if 'ursa' in host:
         raw_sim_dir = '/disk01/rad/sim/m25n1024/s50/'
         caesar_dir = '/disk01/rad/sim/m25n1024/s50/Groups/'
         redshiftFile = '/home/rad/gizmo-extra/outputs_boxspace50.info'
-        d_data = '/home/dleung/Downloads/SIGAME_dev/sigame/temp/z' + str(int(zCloudy)) + '_data_files/'
+
     elif 'flatironinstitute.org' or 'worker' in host:
-        raw_sim_dir = '/mnt/ceph/users/daisyleung/simba/sim/m25n1024/s50/'  # dummy
-        caesar_dir = '/mnt/ceph/users/daisyleung/simba/sim/m25n1024/s50/Groups/'
+
+        if box == '25':
+            # m25 box
+            raw_sim_dir = '/mnt/ceph/users/daisyleung/simba/sim/m25n1024/s50_new/'
+            caesar_dir = '/mnt/ceph/users/daisyleung/simba/sim/m25n1024/s50_new/Groups/'
+        elif box == '50':
+            # m50 box
+            raw_sim_dir = '/mnt/ceph/users/daisyleung/simba/sim/m50n1024/s50/'
+            caesar_dir = '/mnt/ceph/users/daisyleung/simba/sim/m50n1024/s50/Groups/'
+
         redshiftFile = '/mnt/ceph/users/daisyleung/simba/gizmo-extra/outputs_boxspace50.info'
-        d_data = '/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/z' + str(int(zCloudy)) + '_data_files/'
 
         if 'worker' in host:
             import matplotlib
             matplotlib.use('Agg')
 
-    infile = caesar_dir + name_prefix + '{:0>3}'.format(int(36)) + \
+    return raw_sim_name_prefix, name_prefix, raw_sim_dir, caesar_dir, redshiftFile
+
+
+def run_generate_aux_files(caesar_dir, name_prefix, LoadHalo, top=None, savetxt=True, snap=36):
+    """
+
+    run info() to save information on galaxies of the snapshot in a .txt
+
+    """
+    import caesar
+
+    infile = caesar_dir + name_prefix + '{:0>3}'.format(int(snap)) + \
                 '.hdf5'
     obj = caesar.load(infile, LoadHalo=LoadHalo)
-    snapFile = raw_sim_dir + raw_sim_name_prefix + '{:0>3}'.format(int(36)) + '.hdf5'
+    snapFile = raw_sim_dir + raw_sim_name_prefix + '{:0>3}'.format(int(snap)) + '.hdf5'
 
-    output, outName = info(obj, snapFile, top=None, savetxt=True)
-    savedir='../plots/' + str(outName[:outName.find('.txt')]) + '/'
+    output, outName = info(obj, snapFile, top=top, savetxt=savetxt)
+    return output, outName
 
+
+def make_fundamental_plots(outName, savedir):
+
+    """
+
+    Make plots of different galaxies' properties, from .txt file generated from info()
+
+
+    NOTE
+    ----
+    It's bad that we are currently hard coding the columns from read from, and needs to be consistent w/ info(), but not the most important to streamline code for the moment.
+
+
+    Parameters
+    ----------
+    outName: str
+        filename to read from to generate plots of galaxy properties
+
+    savedir: str
+        directory to save plots
+
+    """
     fig, ax = plot_info(23+1, 1, inFile=outName, colNumz=19, zlabel='fgas',
                         xlabel='Mhalo', ylabel='Mstar', logz=False,
                         savedir=savedir)
@@ -481,5 +554,36 @@ if __name__ == '__main__':
                         xlabel='GDR', xthreshold=0.0,
                         ylabel='Zgas', ythreshold=0.0,
                         savedir=savedir)
+
+
+if __name__ == '__main__':
+
+    if len(sys.argv) > 1:
+        debug = sys.argv[1]
+        LoadHalo = False
+    else:
+        debug = False
+        LoadHalo = True
+
+    snapRange = [36]    # don't put 036
+    zCloudy = 6
+    combineBoxes = True
+    box = '50'
+
+    if combineBoxes:
+        outName = 'm25m50n1024_036.txt'
+        combine_galinfo_from_boxes(['snap_m25n1024_036_????.txt', 'snap_m50n1024_036_top12280.txt'], outName)
+
+        savedir = '../plots/' + str(outName[:outName.find('.txt')]) + '/'
+        make_fundamental_plots(outName, savedir)
+
+    else:
+        raw_sim_name_prefix, name_prefix, raw_sim_dir, caesar_dir, redshiftFile = setup_paths(box)
+        output, outName = run_generate_aux_files(caesar_dir, name_prefix,
+                                                 LoadHalo, top=None,
+                                                 savetxt=True, snap=snapRange[0])
+        savedir='../plots/' + str(outName[:outName.find('.txt')]) + '/'
+        make_fundamental_plots(outName, savedir)
+
 
 
