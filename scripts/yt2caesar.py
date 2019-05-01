@@ -247,7 +247,7 @@ class particles2pd(object):
             path to where zx_extracted_gals is stored for global_results.py to read
 
         caesarRotate: bool
-            whether to project gal to xy-plane.
+            whether to project gal to xy-plane. One can do so in datacube step of SIGAME if desired.
 
         """
 
@@ -616,14 +616,46 @@ class particles2pd(object):
 
 if __name__ == '__main__':
 
-    # m25n1024, 's50_new/'
+    from parse_simba import pd_bookkeeping
+    import os
 
-    pp = particles2pd(snapRange=[36],name_prefix='m50n1024_', feedback='s50/', zCloudy=6, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
+    zCloudy = 6
 
-    ggg, zred = pp.run(savepath='xxx/', outname=None, emptyDM=True, caesarRotate=False)
-    print(ggg)
+    if not os.path.exists('xxx25/'):
+        os.mkdir('xxx25/')
 
+    if not os.path.exists('xxx50/'):
+        os.mkdir('xxx50/')
 
+    pp = particles2pd(snapRange=[36],name_prefix='m25n1024_', feedback='s50_new/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
+    ggg1, zred = pp.run(savepath='xxx25/', outname=None, emptyDM=True, caesarRotate=False)
+    print(ggg1)
+
+    from collections import Counter
+    c1 = Counter(ggg1)
+
+    pp = particles2pd(snapRange=[36],name_prefix='m50n1024_', feedback='s50/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
+    ggg2, zred = pp.run(savepath='xxx50/', outname=None, emptyDM=True, caesarRotate=False)
+    print(ggg2)
+    c2 = Counter(ggg2)
+
+    diff = c1-c2
+    print("Duplicated galnames between m25 and m50: ")
+    duplicated = list(diff.elements())
+    print(duplicated)
+
+    if len(duplicated) > 0:
+        import pdb; pdb.set_trace()
+    else:
+        # put all the files together in one directory
+        os.mkdir('xxx/')
+        os.system('mv xxx25/* xxx/')
+        os.system('mv xxx50/* xxx/')
+        os.system('rmdir xxx25/')
+        os.system('rmdir xxx50/')
+        # merge ggg
+        # update temp/galaxies/z6_extracted_galaxies file
+        _, _ = pd_bookkeeping(ggg1.extend(ggg2), 5.93, zCloudy, outname=None)
 
 ''' Ways to select physically meaningful galaxies ....
 
