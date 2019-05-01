@@ -627,6 +627,9 @@ if __name__ == '__main__':
     if not os.path.exists('xxx50/'):
         os.mkdir('xxx50/')
 
+    if not os.path.exists('xxx/'):
+        os.mkdir('xxx/')
+
     pp = particles2pd(snapRange=[36],name_prefix='m25n1024_', feedback='s50_new/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
     ggg1, zred = pp.run(savepath='xxx25/', outname=None, emptyDM=True, caesarRotate=False)
     print(ggg1)
@@ -637,25 +640,54 @@ if __name__ == '__main__':
     pp = particles2pd(snapRange=[36],name_prefix='m50n1024_', feedback='s50/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
     ggg2, zred = pp.run(savepath='xxx50/', outname=None, emptyDM=True, caesarRotate=False)
     print(ggg2)
-    c2 = Counter(ggg2)
+    c1.subtract(Counter(ggg2))
 
-    diff = c1-c2
+    c2 = []
+    for k,v in c1.items():
+        if v == 0:
+            c2.append(k)
+
     print("Duplicated galnames between m25 and m50: ")
-    duplicated = list(diff.elements())
-    print(duplicated)
+    print(c2)
 
-    if len(duplicated) > 0:
-        import pdb; pdb.set_trace()
+    if len(c2) > 0:
+        import glob
+        # renaming duplicates
+        for i, old_n in enumerate(c2):
+
+            if i == 0:
+                lastind = int(ggg1[-1][ggg1[-1].find('s36_')+5:])
+
+            newind = lastind + 1
+            halo_name = old_n[:old_n.find('_')]   # let's just keep the halo number from the m25 box, it's fine even tho it's not from the same halo as the m50 box but we don't use that info.
+            new_name = halo_name + '_s36_G' + str(newind)
+            lastind = newind
+
+            ggg2.extend([new_name])
+            ggg1.remove(old_n)
+
+            old_files = glob.glob('xxx25/z*' + old_n + '_sim.*')
+            for fff in old_files:
+                basename = os.path.basename(fff)
+                basename = basename[:basename.find('_')]
+                extension = os.path.splitext(fff)[1]
+                print('mv ' + fff + ' ' + 'xxx25/' + basename + '_' + new_name + '_sim' + extension)
+                os.system('mv ' + fff + ' ' + 'xxx25/' + basename + '_' + new_name + '_sim' + extension)
+
+            os.system('mv xxx25/* xxx/.')
     else:
         # put all the files together in one directory
-        os.mkdir('xxx/')
         os.system('mv xxx25/* xxx/')
-        os.system('mv xxx50/* xxx/')
-        os.system('rmdir xxx25/')
-        os.system('rmdir xxx50/')
-        # merge ggg
-        # update temp/galaxies/z6_extracted_galaxies file
-        _, _ = pd_bookkeeping(ggg1.extend(ggg2), 5.93, zCloudy, outname=None)
+
+    # merge ggg
+    # update temp/galaxies/z6_extracted_galaxies file
+    for g in ggg2:
+        ggg1.extend([g])
+    _, _ = pd_bookkeeping(ggg1, np.ones(len(ggg1))*5.93, zCloudy, outname=None)
+    os.system('mv xxx50/* xxx/.')
+    os.system('rmdir xxx25/')
+    os.system('rmdir xxx50/')
+
 
 ''' Ways to select physically meaningful galaxies ....
 
