@@ -132,7 +132,6 @@ def info(obj, snapFile, top=None, savetxt=False):
     # print(output)
 
     if savetxt:
-
         outputFileName = aux_filename(snapFile, top)
         f = open(outputFileName, 'w')
         f.write(output)
@@ -142,7 +141,7 @@ def info(obj, snapFile, top=None, savetxt=False):
 
 
 def aux_filename(snapFile, top):
-    return snapFile[50:-5] + '_top' + str(top) + '.txt'
+    return snapFile[snapFile.find('snap_'):-5] + '_top' + str(top) + '.txt'
 
 
 def combine_galinfo_from_boxes(files, outName):
@@ -167,10 +166,9 @@ def combine_galinfo_from_boxes(files, outName):
         else:
             xx = np.vstack([xx, np.genfromtxt(i)])
 
-    f = open(outName, 'w')
-    f.write(xx)
-    f.close()
+    comment = '## ID      Mstar     Mgas      MBH    fedd    SFR [Msun/yr]      SFRSD [Msun/yr/kpc^2]    SFRSD_r_stellar_half_mass [Msun/yr/kpc^2]    gasSD [Msun/pc^2]    r_baryon   r_gas      r_gas_half_mass      r_stellar    r_stellar_half_mass    Z_sfrWeighted [/Zsun]    Z_massWeighted [/Zsun]     Z_stellar [/Zsun]     T_gas_massWeighted    T_gas_SFRWeighted   fgas    f_h2_fromSnap   DGR   nrho      Central\t|  Mhalo_parent     HID'
 
+    np.savetxt(outName, xx, header=comment)
 
 
 def setup_cmap(cm='magma'):    # "plasma_r"
@@ -482,7 +480,6 @@ def run_generate_aux_files(caesar_dir, name_prefix, LoadHalo, top=None, savetxt=
                 '.hdf5'
     obj = caesar.load(infile, LoadHalo=LoadHalo)
     snapFile = raw_sim_dir + raw_sim_name_prefix + '{:0>3}'.format(int(snap)) + '.hdf5'
-
     output, outName = info(obj, snapFile, top=top, savetxt=savetxt)
     return output, outName
 
@@ -598,14 +595,12 @@ if __name__ == '__main__':
 
     snapRange = [36]    # don't put 036
     zCloudy = 6
-    combineBoxes = False
-    box = '50'
-
-    # make_fundamental_plots('snap_m50n1024_036_top12280.txt', '../plots/snap_m50n1024_036_top12280/')
+    combineBoxes = True
+    box = '25'
 
     if combineBoxes:
         outName = 'm25m50n1024_036.txt'
-        combine_galinfo_from_boxes(['snap_m25n1024_036_????.txt', 'snap_m50n1024_036_top12280.txt'], outName)
+        combine_galinfo_from_boxes(['snap_m25n1024_036_top17801.txt', 'snap_m50n1024_036_top12280.txt'], outName)
 
         savedir = '../plots/' + str(outName[:outName.find('.txt')]) + '/'
         make_fundamental_plots(outName, savedir)
