@@ -527,9 +527,9 @@ class particles2pd(object):
                 star_y = ff(star_pos[:, 1])
                 star_z = ff(star_pos[:, 2])
 
-                star_vx = ff(star_vel[:,0].d)
-                star_vy = ff(star_vel[:,1].d)
-                star_vz = ff(star_vel[:,2].d)
+                star_vx = ff(star_vel[:,0])
+                star_vy = ff(star_vel[:,1])
+                star_vz = ff(star_vel[:,2])
             else:
                 star_x = star_pos[:, 0]
                 star_y = star_pos[:, 1]
