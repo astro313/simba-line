@@ -230,7 +230,7 @@ class particles2pd(object):
         self.snapFile = self.def_snapFileName()
 
 
-    def run(self, savepath=None, outname=None, emptyDM=True, caesarRotate=False):
+    def run(self, savepath=None, outname=None, emptyDM=True, caesarRotate=False, LoadHalo=False):
         """
         Loop through snapRange and run main_proc()
 
@@ -249,10 +249,13 @@ class particles2pd(object):
         caesarRotate: bool
             whether to project gal to xy-plane. One can do so in datacube step of SIGAME if desired.
 
+        LoadHalo: bool
+            True so that we can crosslink galaxy properties (e.g., whether it's a central) to sigame output via galname
+
         """
 
         for idx in range(len(self.snapRange)):
-            self.load_obj_snap(idx)
+            self.load_obj_snap(idx, LoadHalo=LoadHalo)
             if idx == 0:
                 gnames, zzz = self.main_proc(savepath=savepath, emptyDM=emptyDM, caesarRotate=caesarRotate)
             else:
@@ -310,12 +313,6 @@ class particles2pd(object):
 
         # load in the fields from snapshot
         print("Read in gas fields")
-
-        if self.debug:
-            # compare against output saved from YT (parse_simba.py)
-            sim_gas = pd.read_pickle('/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/z6_data_files/particle_data/sim_data/z5.93_h0_s36_G0_sim.gas')
-            sim_star = pd.read_pickle('/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/z6_data_files/particle_data/sim_data/z5.93_h0_s36_G0_sim.star')
-
         rho_crit_cgs = 1.8791e-29      # /h^2
         unit_Density = rho_crit_cgs *self.h*self.h * u.g/(u.cm**3)
         gas_densities_p = readsnap(self.snapFile,'rho','gas',units=1)
@@ -378,6 +375,9 @@ class particles2pd(object):
 
         print("Read in DM mass for each particle: " )
         dm_p_m = get_partmasses_from_snapshot(self.snapFile, self.obj, ptype='dm')
+
+        print("Read BH mdot: ")
+        bhmdot = readsnap(self.snapFile, 'BH_Mdot','bndry',suppress=1)*1.e10/self.h/3.08568e+16*3.155e7 # in Mo/yr
 
         if not os.path.exists(savepath):
             os.makedirs(savepath)
@@ -610,14 +610,243 @@ class particles2pd(object):
 
             galName.append(galname)
             zred.append(self.redshift)
+
+            # SFRSD and gasSD within half mass radius of gas
+            _SFRSD = calc_SFRSD_inside_half_mass(gal, gas_SFR, gas_m, gas_pos)
+            _gasSD = calc_gasSD_inside_half_mass(gal, gas_m, gas_pos)
+
+            # link galname to galaxy properties from caesar
+            if gg == 0:
+                total_Ngal = len(self.obj.galaxies)
+                groupID = np.empty(total_Ngal)
+                galnames = []
+                mstar = np.empty(total_Ngal)
+                mgas = np.empty(total_Ngal)
+                mbh = np.empty(total_Ngal)
+                fedd_array = np.empty(total_Ngal)
+                sfr = np.empty(total_Ngal)
+                sfrsd = np.empty(total_Ngal)
+                sfrsd_manual = np.empty(total_Ngal)
+                gassd = np.empty(total_Ngal)
+                gassd_manual = np.empty(total_Ngal)
+                gasR = np.empty(total_Ngal)
+                gasR_half = np.empty(total_Ngal)
+                starR_half = np.empty(total_Ngal)
+                Zgas = np.empty(total_Ngal)
+                Zstar = np.empty(total_Ngal)
+                fgas = np.empty(total_Ngal)
+                fh2 = np.empty(total_Ngal)
+                gdr = np.empty(total_Ngal)
+                central = np.empty(total_Ngal)
+                mhalo = np.empty(total_Ngal)
+                hid = np.empty(total_Ngal)
+
+            groupID, galnames, mstar, mgas, mbh, fedd_array, sfr, sfrsd, sfrsd_manual, gassd, gassd_manual, gasR, gasR_half, starR_half, Zgas, Zstar, fgas, fh2, gdr, central, mhalo, hid = link_caesarGalProp_galname(gal, galname, gg, groupID, galnames, mstar, mgas, mbh, fedd_array, sfr, sfrsd, sfrsd_manual, gassd, gassd_manual, gasR, gasR_half, starR_half, Zgas, Zstar, fgas, fh2, gdr, central, mhalo, hid, _SFRSD, _gasSD, np.sum(gas_f_H2 * gas_m)/np.sum(gas_m), bhmdot)
+
+        # link galname to galaxy properties from caesar
+        gal_prop = dict.fromkeys(['GroupID', 'galnames', 'Mstar', 'Mgas', 'MBH', 'fedd', 'SFR', 'SFRSD_gasR_caesar', 'SFRSD_gasR_manual', 'gasSD_caesar', 'gasSD_manual', 'r_gas', 'r_gas_half_mass', 'r_stellar_half_mass', 'Zsfr', 'Zstellar', 'fgas', 'f_H2_fromSnap', 'DGR', 'Central', 'Mhalo_parent', 'HID'])
+
+        gal_prop['GroupID'] = groupID
+        gal_prop['galnames'] = galnames
+        gal_prop['Mstar'] = mstar
+        gal_prop['Mgas'] = mgas
+        gal_prop['MBH'] = mbh
+        gal_prop['fedd'] = fedd_array
+        gal_prop['SFR'] = sfr
+        gal_prop['SFRSD_gasR_caesar'] = sfrsd
+        gal_prop['SFRSD_gasR_manual'] = sfrsd_manual
+        gal_prop['gasSD_caesar'] = gassd
+        gal_prop['gasSD_manual']= gassd_manual
+        gal_prop['r_gas'] = gasR
+        gal_prop['r_gas_half_mass'] = gasR_half
+        gal_prop['r_stellar_half_mass'] = starR_half
+        gal_prop['Zsfr'] = Zgas
+        gal_prop['Zstellar'] = Zstar
+        gal_prop['fgas'] = fgas
+        gal_prop['f_H2_fromSnap'] = fh2
+        gal_prop['DGR'] = gdr
+        gal_prop['Central'] = central
+        gal_prop['Mhalo_parent'] = mhalo
+        gal_prop['HID'] = hid
+
+        gal_prop = pd.DataFrame([gal_prop])
+        gal_prop.to_pickle(savepath + 'gal_catalog.pkl')
+
         return galName, zred
 
+
+def calc_SFRSD_inside_half_mass(galObj, gas_SFR, gas_m, gas_pos, halfMassR='gas'):
+    """
+    Calculate the SFR surface density inside the half light radius.
+
+    Parameters
+    ----------
+    galObj: object
+        caesar galaxy object of a given galaxy
+
+    gas_SFR: array
+        particles of SFR that belongs to a given galaxy
+
+    gas_m: array
+        gas particles mass that belongs to a given galaxy
+
+    gas_pos: array
+        gas particles position that belongs to a given galaxy
+
+    halfMassR: str
+        which half mass radius to use? 'gas' or 'stars'
+
+    Return
+    ------
+    SFRSD: float
+        [Msun/yr/kpc^2]
+
+    """
+
+    if halfMassR == 'gas':
+        half_mass_radius = galObj.radii['gas'].in_units('kpc')
+    elif halfMassR == 'stars':
+        half_mass_radius = galObj.radii['stellar_half_mass'].in_units('kpc')
+
+    extent = np.sqrt(gas_pos[:, 0]**2 + gas_pos[:, 1]**2 + gas_pos[:, 2]**2)
+    print(extent.shape)
+    mask = extent <= half_mass_radius
+    print("SFR inner: {:.2f}".format(np.sum(gas_SFR[mask])))
+    print("SFR global: {:.2f}".format(galObj.sfr))
+    #
+    SFRSD = np.sum(gas_SFR[mask]) / np.pi/half_mass_radius**2
+    print("SFRSD: {:.2f}".format(SFRSD))
+    print(galObj.sfr / np.pi / half_mass_radius**2)
+    return SFRSD
+
+
+def calc_gasSD_inside_half_mass(galObj, gas_m, gas_pos, halfMassR='gas'):
+
+    """
+    Calculate the gas mass surface density inside the half light radius.
+
+    Parameters
+    ----------
+    galObj: object
+        caesar galaxy object of a given galaxy
+
+    gas_m: array
+        gas particles mass that belongs to a given galaxy
+
+    gas_pos: array
+        gas particles position that belongs to a given galaxy
+
+    halfMassR: str
+        which half mass radius to use? 'gas' or 'stars''
+
+    Returns
+    -------
+    gasSD: float
+        [Msun/pc^2]
+
+    """
+    if halfMassR == 'gas':
+        half_mass_radius = galObj.radii['gas_half_mass'].in_units('kpc')
+    elif halfMassR == 'stars':
+        half_mass_radius = galObj.radii['stellar_half_mass'].in_units('kpc')
+
+    extent = np.sqrt(gas_pos[:, 0]**2 + gas_pos[:, 1]**2 + gas_pos[:, 2]**2)
+    mask = extent <= half_mass_radius
+    gasSD = np.sum(gas_m[mask])/np.pi/(half_mass_radius*1.e3)**2
+    print("gas SD: ")
+    print(gasSD)
+    print(galObj.masses['gas'] / np.pi / (half_mass_radius*1.e3)**2)
+    return gasSD
+
+
+def link_caesarGalProp_galname(galObj, galname, index, groupID, galnames, mstar, mgas, mbh, fedd_array, sfr, sfrsd, sfrsd_manual, gassd, gassd_manual, gasR, gasR_half, starR_half, Zgas, Zstar, fgas, fh2, gdr, central, mhalo, hid, SFRSD_manual, gasSD_manual, f_h2, bhmdot, frad=0.1):
+    """
+
+    link galaixes properties from CAESAR via galname so we know all the properties of a given galaxy after running sigame
+
+    Parameters
+    ----------
+    galObj: caesar galaxy object
+
+    galname: str
+        galaxy name
+
+    index: int
+        index corresponding to that galaxy
+
+    groupID, galnames, mstar, mgas, mbh, fedd_array, sfr, sfrsd, sfrsd_manual, gassd, gassd_manual, gasR, gasR_half, starR_half, Zgas, Zstar, fgas, fh2, gdr, central, mhalo, hid: array or list
+
+    SFRSD_manual: float
+        from calc_SFRSD_inside_half_mass()
+
+    gasSD_manual: float
+        from calc_gasSD_inside_half_mass()
+
+    f_h2: float
+        mass-weighted f_h2
+
+    bhmdot: array
+        BH mdot in Msun/yr
+
+    frad: float
+        BH radiation efficiency
+
+    """
+
+    phm, phid = -1, -1
+
+    if galObj.halo is not None:
+        phm, phid = galObj.halo.masses['total'], galObj.halo.GroupID
+
+    try:
+        bhmdots = [bhmdot[k] for k in galObj.bhlist]
+        bm = galObj.masses['bh']
+        imax = np.argmax(bm)
+        try:
+            bm = bm[imax]
+            bmdot = bhmdots[imax]        # only the massive BH particle matters.
+        except:
+            bm = bm
+            bmdot = bhmdots
+
+        mdot_edd = 4*np.pi*6.67e-8*1.673e-24/(frad*3.e10*6.65245e-25) * bm * 3.155e7 # in Mo/yr
+        fedd = bmdot / mdot_edd
+        fedd = fedd[0].value
+    except:
+        bm = 0
+        fedd = 0
+
+    groupID[index] = galObj.GroupID
+    galnames.append(galname)
+    mstar[index] = galObj.masses['stellar']
+    mgas[index] = galObj.masses['gas']
+    mbh[index] = bm
+    fedd_array[index] = fedd
+    sfr[index] = galObj.sfr
+    sfrsd[index] = galObj.sfr/np.pi/galObj.radii['gas']**2
+    sfrsd_manual[index] = SFRSD_manual
+    gassd[index] = galObj.masses['gas']/np.pi/galObj.radii['gas']**2
+    gassd_manual[index] = gasSD_manual
+    gasR[index] = galObj.radii['gas']
+    gasR_half[index] = galObj.radii['gas_half_mass']
+    starR_half[index] = galObj.radii['stellar_half_mass']
+    Zgas[index] = galObj.metallicities['sfr_weighted']/0.0134
+    Zstar[index] = galObj.metallicities['stellar']/0.0134
+    fgas[index] = galObj.gas_fraction             # = Mgas / (Mg + Ms)
+    fh2[index] = f_h2
+    gdr[index] = galObj.masses['gas']/galObj.masses['dust']
+    central[index] = galObj.central
+    mhalo[index] = phm
+    hid[index] = phid
+
+    return groupID, galnames, mstar, mgas, mbh, fedd_array, sfr, sfrsd, sfrsd_manual, gassd, gassd_manual, gasR, gasR_half, starR_half, Zgas, Zstar, fgas, fh2, gdr, central, mhalo, hid
 
 
 if __name__ == '__main__':
 
     from parse_simba import pd_bookkeeping
     import os
+    import pandas as pd
 
     zCloudy = 6
 
@@ -631,14 +860,14 @@ if __name__ == '__main__':
         os.mkdir('xxx/')
 
     pp = particles2pd(snapRange=[36],name_prefix='m25n1024_', feedback='s50_new/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
-    ggg1, zred = pp.run(savepath='xxx25/', outname=None, emptyDM=True, caesarRotate=False)
+    ggg1, zred = pp.run(savepath='xxx25/', outname=None, emptyDM=True, caesarRotate=False, LoadHalo=True)
     print(ggg1)
 
     from collections import Counter
     c1 = Counter(ggg1)
 
     pp = particles2pd(snapRange=[36],name_prefix='m50n1024_', feedback='s50/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
-    ggg2, zred = pp.run(savepath='xxx50/', outname=None, emptyDM=True, caesarRotate=False)
+    ggg2, zred = pp.run(savepath='xxx50/', outname=None, emptyDM=True, caesarRotate=False, LoadHalo=True)
     print(ggg2)
     c1.subtract(Counter(ggg2))
 
@@ -651,6 +880,8 @@ if __name__ == '__main__':
     print(c2)
 
     if len(c2) > 0:
+        p1 = pd.read_pickle('xxx25/gal_catalog.pkl')
+
         import glob
         # renaming duplicates
         for i, old_n in enumerate(c2):
@@ -666,6 +897,12 @@ if __name__ == '__main__':
             ggg2.extend([new_name])
             ggg1.remove(old_n)
 
+            # update name in pickle file
+            iii = np.where(p1['galnames'] == old_n)
+            p1['galnames'][iii] = new_name
+            import pdb; pdb.set_trace()
+            p1.to_pickle('xxx25/gal_catalog.pkl')     # update
+
             old_files = glob.glob('xxx25/z*' + old_n + '_sim.*')
             for fff in old_files:
                 basename = os.path.basename(fff)
@@ -678,6 +915,18 @@ if __name__ == '__main__':
     else:
         # put all the files together in one directory
         os.system('mv xxx25/* xxx/')
+
+    # merge pickle files containing galaxy properties
+    os.system('mv xxx/gal_catalog.pkl xxx25/')
+    p1 = pd.read_pickle('xxx25/gal_catalog.pkl')    # m25
+    p2 = pd.read_pickle('xxx50/gal_catalog.pkl')    # m50
+
+    results = {}
+    for kk in p1.keys():
+        results[kk] = np.hstack([p1[kk].values[0], p2[kk].values[0]])
+    results = pd.DataFrame([results])
+    results.to_pickle('xxx/gal_catalog.pkl')
+    _bubu = pd.read_pickle('xxx/gal_catalog.pkl')
 
     # merge ggg
     # update temp/galaxies/z6_extracted_galaxies file
