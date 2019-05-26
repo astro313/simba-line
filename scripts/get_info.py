@@ -107,14 +107,14 @@ def info(obj, snapFile, top=None, savetxt=False):
                    bm,
                    fedd,
                    o.sfr,
-                   o.sfr/np.pi/o.radii['gas']**2,
-                   o.sfr/np.pi/o.radii['stellar_half_mass']**2,
-                   o.masses['gas']/np.pi/(o.radii['gas']*1.e3)**2,
-                   o.radii['baryon'],
-                   o.radii['gas'],
-                   o.radii['gas_half_mass'],
-                   o.radii['stellar'],
-                   o.radii['stellar_half_mass'],
+                   o.sfr/np.pi/o.radii['gas'].in_units('kpc')**2,
+                   o.sfr/np.pi/o.radii['stellar_half_mass'].in_units('kpc')**2,
+                   o.masses['gas']/np.pi/(o.radii['gas'].in_units('kpc')*1.e3)**2,
+                   o.radii['baryon'].in_units('kpc'),
+                   o.radii['gas'].in_units('kpc'),
+                   o.radii['gas_half_mass'].in_units('kpc'),
+                   o.radii['stellar'].in_units('kpc'),
+                   o.radii['stellar_half_mass'].in_units('kpc'),
                    o.metallicities['sfr_weighted']/0.0134,
                    o.metallicities['mass_weighted']/0.0134,
                    o.metallicities['stellar']/0.0134,
@@ -319,7 +319,7 @@ def plot_info(colNumx, colNumy, inFile,
         # ax.set_xscale('symlog')
         ax.set_xscale('log')
         if 'sfrsd' in xlabel.lower():
-            ax.set_xlim(10**-4, 10**-0.5)
+            ax.set_xlim(10**-4, 10**1.5)
 
     if logy:
         # ax.set_yscale('symlog')
@@ -557,13 +557,13 @@ def make_fundamental_plots(outName, savedir):
                     ylabel='fh2', logy=False, zlabel='Mstar', savedir=savedir)
 
     fig, ax = plot_info(6, 19, inFile=outName, colNumz=9,
-                    xlabel='SFRSD [Msun/pc2]',
+                    xlabel='SFRSD [Msun/kpc2]',
                     xthreshold=0.0,
                     ylabel='fgas', logy=False, zlabel='Rbaryon [kpc]',
                     logz=False, savedir=savedir)
     # fh2
     fig, ax = plot_info(6, 20, inFile=outName, colNumz=9,
-                    xlabel='SFRSD [Msun/pc2]',
+                    xlabel='SFRSD [Msun/kpc2]',
                     xthreshold=0.0,
                     ylabel='fh2', logy=False, zlabel='Rbaryon [kpc]',
                     logz=False, savedir=savedir)
