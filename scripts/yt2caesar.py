@@ -603,7 +603,6 @@ class particles2pd(object):
             # simgas, simstar, simdm = center_cut_galaxy(simgas, simstar, simdm, plot=False)
             # import pdb; pdb.set_trace()
 
-
             simgas.to_pickle(simgas_path)
             simstar.to_pickle(simstar_path)
             simdm.to_pickle(simdm_path)
@@ -860,14 +859,14 @@ if __name__ == '__main__':
         os.mkdir('xxx/')
 
     pp = particles2pd(snapRange=[36],name_prefix='m25n1024_', feedback='s50_new/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
-    ggg1, zred = pp.run(savepath='xxx25/', outname=None, emptyDM=True, caesarRotate=False, LoadHalo=True)
+    ggg1, zred = pp.run(savepath='xxx25/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m25', emptyDM=True, caesarRotate=False, LoadHalo=True)
     print(ggg1)
 
     from collections import Counter
     c1 = Counter(ggg1)
 
     pp = particles2pd(snapRange=[36],name_prefix='m50n1024_', feedback='s50/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
-    ggg2, zred = pp.run(savepath='xxx50/', outname=None, emptyDM=True, caesarRotate=False, LoadHalo=True)
+    ggg2, zred = pp.run(savepath='xxx50/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m50', emptyDM=True, caesarRotate=False, LoadHalo=True)
     print(ggg2)
     c1.subtract(Counter(ggg2))
 
@@ -898,9 +897,8 @@ if __name__ == '__main__':
             ggg1.remove(old_n)
 
             # update name in pickle file
-            iii = np.where(p1['galnames'] == old_n)
-            p1['galnames'][iii] = new_name
-            import pdb; pdb.set_trace()
+            iii = np.where(p1['galnames'].values[0] == old_n)
+            p1['galnames'][0][iii] = new_name
             p1.to_pickle('xxx25/gal_catalog.pkl')     # update
 
             old_files = glob.glob('xxx25/z*' + old_n + '_sim.*')
@@ -932,7 +930,7 @@ if __name__ == '__main__':
     # update temp/galaxies/z6_extracted_galaxies file
     for g in ggg2:
         ggg1.extend([g])
-    _, _ = pd_bookkeeping(ggg1, np.ones(len(ggg1))*5.93, zCloudy, outname=None)
+    _, _ = pd_bookkeeping(ggg1, np.ones(len(ggg1))*5.93, zCloudy, outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m25m50')
     os.system('mv xxx50/* xxx/.')
     os.system('rmdir xxx25/')
     os.system('rmdir xxx50/')
