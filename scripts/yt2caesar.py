@@ -822,13 +822,13 @@ def link_caesarGalProp_galname(galObj, galname, index, groupID, galnames, mstar,
     mbh[index] = bm
     fedd_array[index] = fedd
     sfr[index] = galObj.sfr
-    sfrsd[index] = galObj.sfr/np.pi/galObj.radii['gas']**2
+    sfrsd[index] = galObj.sfr/np.pi/(galObj.radii['gas'].in_units('kpc'))**2
     sfrsd_manual[index] = SFRSD_manual
-    gassd[index] = galObj.masses['gas']/np.pi/galObj.radii['gas']**2
+    gassd[index] = galObj.masses['gas']/np.pi/(galObj.radii['gas'].in_units('pc'))**2
     gassd_manual[index] = gasSD_manual
-    gasR[index] = galObj.radii['gas']
-    gasR_half[index] = galObj.radii['gas_half_mass']
-    starR_half[index] = galObj.radii['stellar_half_mass']
+    gasR[index] = galObj.radii['gas'].in_units('kpc')
+    gasR_half[index] = galObj.radii['gas_half_mass'].in_units('kpc')
+    starR_half[index] = galObj.radii['stellar_half_mass'].in_units('kpc')
     Zgas[index] = galObj.metallicities['sfr_weighted']/0.0134
     Zstar[index] = galObj.metallicities['stellar']/0.0134
     fgas[index] = galObj.gas_fraction             # = Mgas / (Mg + Ms)
