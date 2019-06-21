@@ -603,6 +603,7 @@ class particles2pd(object):
             # simgas, simstar, simdm = center_cut_galaxy(simgas, simstar, simdm, plot=False)
             # import pdb; pdb.set_trace()
 
+            here
             simgas.to_pickle(simgas_path)
             simstar.to_pickle(simstar_path)
             simdm.to_pickle(simdm_path)
@@ -616,29 +617,28 @@ class particles2pd(object):
 
             # link galname to galaxy properties from caesar
             if gg == 0:
-                total_Ngal = len(self.obj.galaxies)
-                groupID = np.empty(total_Ngal)
+                groupID = []
                 galnames = []
-                mstar = np.empty(total_Ngal)
-                mgas = np.empty(total_Ngal)
-                mbh = np.empty(total_Ngal)
-                fedd_array = np.empty(total_Ngal)
-                sfr = np.empty(total_Ngal)
-                sfrsd = np.empty(total_Ngal)
-                sfrsd_manual = np.empty(total_Ngal)
-                gassd = np.empty(total_Ngal)
-                gassd_manual = np.empty(total_Ngal)
-                gasR = np.empty(total_Ngal)
-                gasR_half = np.empty(total_Ngal)
-                starR_half = np.empty(total_Ngal)
-                Zgas = np.empty(total_Ngal)
-                Zstar = np.empty(total_Ngal)
-                fgas = np.empty(total_Ngal)
-                fh2 = np.empty(total_Ngal)
-                gdr = np.empty(total_Ngal)
-                central = np.empty(total_Ngal)
-                mhalo = np.empty(total_Ngal)
-                hid = np.empty(total_Ngal)
+                mstar = []
+                mgas = []
+                mbh = []
+                fedd_array = []
+                sfr = []
+                sfrsd = []
+                sfrsd_manual = []
+                gassd = []
+                gassd_manual = []
+                gasR = []
+                gasR_half = []
+                starR_half = []
+                Zgas = []
+                Zstar = []
+                fgas = []
+                fh2 = []
+                gdr = []
+                central = []
+                mhalo = []
+                hid = []
 
             groupID, galnames, mstar, mgas, mbh, fedd_array, sfr, sfrsd, sfrsd_manual, gassd, gassd_manual, gasR, gasR_half, starR_half, Zgas, Zstar, fgas, fh2, gdr, central, mhalo, hid = link_caesarGalProp_galname(gal, galname, gg, groupID, galnames, mstar, mgas, mbh, fedd_array, sfr, sfrsd, sfrsd_manual, gassd, gassd_manual, gasR, gasR_half, starR_half, Zgas, Zstar, fgas, fh2, gdr, central, mhalo, hid, _SFRSD, _gasSD, np.sum(gas_f_H2 * gas_m)/np.sum(gas_m), bhmdot)
 
@@ -668,7 +668,7 @@ class particles2pd(object):
         gal_prop['Mhalo_parent'] = mhalo
         gal_prop['HID'] = hid
 
-        gal_prop = pd.DataFrame([gal_prop])
+        gal_prop = pd.DataFrame(gal_prop)
         gal_prop.to_pickle(savepath + 'gal_catalog.pkl')
 
         return galName, zred
@@ -815,28 +815,29 @@ def link_caesarGalProp_galname(galObj, galname, index, groupID, galnames, mstar,
         bm = 0
         fedd = 0
 
-    groupID[index] = galObj.GroupID
+    groupID.append(galObj.GroupID)
     galnames.append(galname)
-    mstar[index] = galObj.masses['stellar']
-    mgas[index] = galObj.masses['gas']
-    mbh[index] = bm
-    fedd_array[index] = fedd
-    sfr[index] = galObj.sfr
-    sfrsd[index] = galObj.sfr/np.pi/(galObj.radii['gas'].in_units('kpc'))**2
-    sfrsd_manual[index] = SFRSD_manual
-    gassd[index] = galObj.masses['gas']/np.pi/(galObj.radii['gas'].in_units('pc'))**2
-    gassd_manual[index] = gasSD_manual
-    gasR[index] = galObj.radii['gas'].in_units('kpc')
-    gasR_half[index] = galObj.radii['gas_half_mass'].in_units('kpc')
-    starR_half[index] = galObj.radii['stellar_half_mass'].in_units('kpc')
-    Zgas[index] = galObj.metallicities['sfr_weighted']/0.0134
-    Zstar[index] = galObj.metallicities['stellar']/0.0134
-    fgas[index] = galObj.gas_fraction             # = Mgas / (Mg + Ms)
-    fh2[index] = f_h2
-    gdr[index] = galObj.masses['gas']/galObj.masses['dust']
-    central[index] = galObj.central
-    mhalo[index] = phm
-    hid[index] = phid
+
+    mstar.append(galObj.masses['stellar'])
+    mgas.append(galObj.masses['gas'])
+    mbh.append(bm)
+    fedd_array.append(fedd)
+    sfr.append(galObj.sfr)
+    sfrsd.append(galObj.sfr/np.pi/(galObj.radii['gas'].in_units('kpc'))**2)
+    sfrsd_manual.append(SFRSD_manual)
+    gassd.append(galObj.masses['gas']/np.pi/(galObj.radii['gas'].in_units('pc'))**2)
+    gassd_manual.append(gasSD_manual)
+    gasR.append(galObj.radii['gas'].in_units('kpc'))
+    gasR_half.append(galObj.radii['gas_half_mass'].in_units('kpc'))
+    starR_half.append(galObj.radii['stellar_half_mass'].in_units('kpc'))
+    Zgas.append(galObj.metallicities['sfr_weighted']/0.0134)
+    Zstar.append(galObj.metallicities['stellar']/0.0134)
+    fgas.append(galObj.gas_fraction)             # = Mgas / (Mg + Ms)
+    fh2.append(f_h2)
+    gdr.append(galObj.masses['gas']/galObj.masses['dust'])
+    central.append(galObj.central)
+    mhalo.append(phm)
+    hid.append(phid)
 
     return groupID, galnames, mstar, mgas, mbh, fedd_array, sfr, sfrsd, sfrsd_manual, gassd, gassd_manual, gasR, gasR_half, starR_half, Zgas, Zstar, fgas, fh2, gdr, central, mhalo, hid
 
