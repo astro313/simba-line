@@ -575,9 +575,15 @@ class particles2pd(object):
             simdm_path = (savepath + 'z{:.2f}').format(float(self.redshift)) + \
                           '_' + galname + '_sim.dm'
 
+            # SFRSD and gasSD within half mass radius of gas
+            _SFRSD = calc_SFRSD_inside_half_mass(gal, gas_SFR, gas_m, gas_pos)
+            _gasSD = calc_gasSD_inside_half_mass(gal, gas_m, gas_pos)
+
             simgas = pd.DataFrame({'x': gas_x, 'y': gas_y, 'z': gas_z,
                                    'vx': gas_vx, 'vy': gas_vy, 'vz': gas_vz,
-                                   'SFR': gas_SFR, 'Z': gas_Z,
+                                   'SFR': gas_SFR, 'SFRsd_halfM': _SFRSD,
+                                   'gasSD_halfM': _gasSD,
+                                   'Z': gas_Z,
                                    'nH': gas_densities,
                                    'Tk': gas_Tk, 'h': gas_h,
                                    'f_HI1': gas_f_HI,    # atomic and molecular H
@@ -598,22 +604,16 @@ class particles2pd(object):
                                   'vx': dm_velx, 'vy': dm_vely, 'vz': dm_velz,
                                   'm': dm_m})
 
-
             # from parse_simba import center_cut_galaxy
             # simgas, simstar, simdm = center_cut_galaxy(simgas, simstar, simdm, plot=False)
             # import pdb; pdb.set_trace()
 
-            here
             simgas.to_pickle(simgas_path)
             simstar.to_pickle(simstar_path)
             simdm.to_pickle(simdm_path)
 
             galName.append(galname)
             zred.append(self.redshift)
-
-            # SFRSD and gasSD within half mass radius of gas
-            _SFRSD = calc_SFRSD_inside_half_mass(gal, gas_SFR, gas_m, gas_pos)
-            _gasSD = calc_gasSD_inside_half_mass(gal, gas_m, gas_pos)
 
             # link galname to galaxy properties from caesar
             if gg == 0:
