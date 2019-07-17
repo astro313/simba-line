@@ -842,6 +842,83 @@ def link_caesarGalProp_galname(galObj, galname, index, groupID, galnames, mstar,
     return groupID, galnames, mstar, mgas, mbh, fedd_array, sfr, sfrsd, sfrsd_manual, gassd, gassd_manual, gasR, gasR_half, starR_half, Zgas, Zstar, fgas, fh2, gdr, central, mhalo, hid
 
 
+def rename_duplicates_across_vol(count, ggg1, ggg2, vol1='25', vol2='50', verbose=True):
+    """
+
+    Rename duplicated galaxies from first box to something else and append to ggg2.
+
+    Assuming all galaxies are extracted from snapshot036
+
+    Parameters
+    ----------
+    count: class 'collections.Counter'
+
+    ggg1: list
+        of strings containing galnames in the first volume
+
+    ggg2: list
+        of strings containing galnames in the second volume
+
+    Returns
+    -------
+    overlapped: bool
+        True if there are duplicated galnames
+
+    ggg1: list
+        of strings containing only *non-duplicated* galnames in the first volume
+
+    ggg2: list
+        of strings containing galname in the second volume + duplcated but renamed galnames from the first vol
+
+    """
+
+    c2 = []
+    for k,v in c1.items():
+        if v == 0:
+            c2.append(k)
+
+    if verbose:
+        print("Duplicated galnames between m{:} and m{:}: ".format(vol1, vol2))
+        print(c2)
+
+    if len(c2) > 0:
+        overlapped = True
+        p1 = pd.read_pickle('xxx' + vol1 + '/gal_catalog.pkl')
+
+        import glob
+        # renaming duplicates
+        for i, old_n in enumerate(c2):
+
+            if i == 0:
+                lastind = int(ggg1[-1][ggg1[-1].find('s36_')+5:])
+
+            newind = lastind + 1
+            halo_name = old_n[:old_n.find('_')]   # let's just keep the halo number from the first box, it's fine even tho it's not from the same halo as the second box, but we don't use that info in the future.
+            new_name = halo_name + '_s36_G' + str(newind)
+            lastind = newind
+
+            ggg2.extend([new_name])
+            ggg1.remove(old_n)
+
+            # update name in pickle file
+            iii = np.where(p1['galnames'].values[0] == old_n)
+            p1['galnames'][0][iii] = new_name
+            p1.to_pickle('xxx' + vol1 + '/gal_catalog.pkl')     # update
+
+            old_files = glob.glob('xxx' + vol1 + '/z*' + old_n + '_sim.*')
+            for fff in old_files:
+                basename = os.path.basename(fff)
+                basename = basename[:basename.find('_')]
+                extension = os.path.splitext(fff)[1]
+                print('mv ' + fff + ' ' + 'xxx' + vol1 + '/' + basename + '_' + new_name + '_sim' + extension)
+                os.system('mv ' + fff + ' ' + 'xxx' + vol1 + '/' + basename + '_' + new_name + '_sim' + extension)
+    else:
+        overlapped = False
+
+    return overlapped, ggg1, ggg2
+
+
+
 if __name__ == '__main__':
 
     from parse_simba import pd_bookkeeping
@@ -849,6 +926,9 @@ if __name__ == '__main__':
     import pandas as pd
 
     zCloudy = 6
+
+    if not os.path.exists('xxx100/'):
+        os.mkdir('xxx100/')
 
     if not os.path.exists('xxx25/'):
         os.mkdir('xxx25/')
@@ -871,70 +951,46 @@ if __name__ == '__main__':
     print(ggg2)
     c1.subtract(Counter(ggg2))
 
-    c2 = []
-    for k,v in c1.items():
-        if v == 0:
-            c2.append(k)
+    # 100
+    pp = particles2pd(snapRange=[36],name_prefix='m100n1024_', feedback='s50/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
+    ggg3, zred = pp.run(savepath='xxx100/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m100', emptyDM=True, caesarRotate=False, LoadHalo=True)
+    print(ggg3)
 
-    print("Duplicated galnames between m25 and m50: ")
-    print(c2)
+    # rename duplciates between m25 and m50
+    overlapped, g25_noduplicate, g2550 = rename_duplicates_across_vol(c1, ggg1, ggg2, '25', '50')
+    cab = Counter(g2550)
+    cab.subtract(Counter(ggg3))
 
-    if len(c2) > 0:
-        p1 = pd.read_pickle('xxx25/gal_catalog.pkl')
+    # rename duplciates between m25 + m50 and m100
+    overlapped, g2550_noduplicate, g2550100 = rename_duplicates_across_vol(cab, g2550, ggg3, '50', '100')
+    print("Total number of galaxies found from m25 + 50 + 100: ")
+    print(len(g2550100))
 
-        import glob
-        # renaming duplicates
-        for i, old_n in enumerate(c2):
-
-            if i == 0:
-                lastind = int(ggg1[-1][ggg1[-1].find('s36_')+5:])
-
-            newind = lastind + 1
-            halo_name = old_n[:old_n.find('_')]   # let's just keep the halo number from the m25 box, it's fine even tho it's not from the same halo as the m50 box but we don't use that info.
-            new_name = halo_name + '_s36_G' + str(newind)
-            lastind = newind
-
-            ggg2.extend([new_name])
-            ggg1.remove(old_n)
-
-            # update name in pickle file
-            iii = np.where(p1['galnames'].values[0] == old_n)
-            p1['galnames'][0][iii] = new_name
-            p1.to_pickle('xxx25/gal_catalog.pkl')     # update
-
-            old_files = glob.glob('xxx25/z*' + old_n + '_sim.*')
-            for fff in old_files:
-                basename = os.path.basename(fff)
-                basename = basename[:basename.find('_')]
-                extension = os.path.splitext(fff)[1]
-                print('mv ' + fff + ' ' + 'xxx25/' + basename + '_' + new_name + '_sim' + extension)
-                os.system('mv ' + fff + ' ' + 'xxx25/' + basename + '_' + new_name + '_sim' + extension)
-
-            os.system('mv xxx25/* xxx/.')
-    else:
-        # put all the files together in one directory
-        os.system('mv xxx25/* xxx/')
+    # put all the extract DF files together in one directory
+    os.system('mv xxx25/* xxx/')
+    os.system('mv xxx50/* xxx/')
+    os.system('mv xxx100/* xxx/')
 
     # merge pickle files containing galaxy properties
-    os.system('mv xxx/gal_catalog.pkl xxx25/')
     p1 = pd.read_pickle('xxx25/gal_catalog.pkl')    # m25
     p2 = pd.read_pickle('xxx50/gal_catalog.pkl')    # m50
+    p3 = pd.read_pickle('xxx100/gal_catalog.pkl')   # m100
 
     results = {}
     for kk in p1.keys():
-        results[kk] = np.hstack([p1[kk].values[0], p2[kk].values[0]])
+        results[kk] = np.hstack([p1[kk].values[0], p2[kk].values[0], p3[kk].values[0]])
     results = pd.DataFrame([results])
     results.to_pickle('xxx/gal_catalog.pkl')
     _bubu = pd.read_pickle('xxx/gal_catalog.pkl')
 
     # merge ggg
-    # update temp/galaxies/z6_extracted_galaxies file
-    for g in ggg2:
-        ggg1.extend([g])
-    _, _ = pd_bookkeeping(ggg1, np.ones(len(ggg1))*5.93, zCloudy, outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m25m50')
-    os.system('mv xxx50/* xxx/.')
+    # to update temp/galaxies/z6_extracted_galaxies file
+    g2550100 = g25_noduplicate + g2550_noduplicate + g2550100
+    _, _ = pd_bookkeeping(g2550100, np.ones(len(g2550100))*5.93, zCloudy, outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m25m50m100')
+
     os.system('rmdir xxx25/')
     os.system('rmdir xxx50/')
+    os.system('rmdir xxx100/')
 
 
 ''' Ways to select physically meaningful galaxies ....
