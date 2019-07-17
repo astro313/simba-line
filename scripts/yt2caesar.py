@@ -967,9 +967,9 @@ if __name__ == '__main__':
     print(len(g2550100))
 
     # put all the extract DF files together in one directory
-    os.system('mv xxx25/* xxx/')
-    os.system('mv xxx50/* xxx/')
-    os.system('mv xxx100/* xxx/')
+    os.system('cp xxx25/* xxx/')
+    os.system('cp xxx50/* xxx/')
+    os.system('cp xxx100/* xxx/')
 
     # merge pickle files containing galaxy properties
     p1 = pd.read_pickle('xxx25/gal_catalog.pkl')    # m25
@@ -987,10 +987,6 @@ if __name__ == '__main__':
     # to update temp/galaxies/z6_extracted_galaxies file
     g2550100 = g25_noduplicate + g2550_noduplicate + g2550100
     _, _ = pd_bookkeeping(g2550100, np.ones(len(g2550100))*5.93, zCloudy, outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m25m50m100')
-
-    os.system('rmdir xxx25/')
-    os.system('rmdir xxx50/')
-    os.system('rmdir xxx100/')
 
 
 ''' Ways to select physically meaningful galaxies ....
