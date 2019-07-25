@@ -29,7 +29,7 @@ import caesar
 import matplotlib.pyplot as plt
 
 
-def get_partmasses_from_snapshot(snapFile, obj, ptype, physicalUnit=True, verbose=False):
+def get_partmasses_from_snapshot(snapFile: str, obj, ptype: str, physicalUnit: bool=True, verbose:bool=False):
     """
 
     Use readgadget to read in the info of each particles.
@@ -581,7 +581,8 @@ class particles2pd(object):
 
             simgas = pd.DataFrame({'x': gas_x, 'y': gas_y, 'z': gas_z,
                                    'vx': gas_vx, 'vy': gas_vy, 'vz': gas_vz,
-                                   'SFR': gas_SFR, 'SFRsd_halfM': _SFRSD,
+                                   'SFR': gas_SFR,
+                                   'SFRsd_halfM': _SFRSD,     # will be same for all particles in a galaxy; used for sigame.galaxy.interpolate_dif()
                                    'gasSD_halfM': _gasSD,
                                    'Z': gas_Z,
                                    'nH': gas_densities,
@@ -901,17 +902,24 @@ def rename_duplicates_across_vol(count, ggg1, ggg2, vol1='25', vol2='50', verbos
             ggg1.remove(old_n)
 
             # update name in pickle file
-            iii = np.where(p1['galnames'].values[0] == old_n)
-            p1['galnames'][0][iii] = new_name
-            p1.to_pickle('xxx' + vol1 + '/gal_catalog.pkl')     # update
-
+            iii = np.squeeze(np.where(p1['galnames'].values == old_n))
             old_files = glob.glob('xxx' + vol1 + '/z*' + old_n + '_sim.*')
-            for fff in old_files:
-                basename = os.path.basename(fff)
-                basename = basename[:basename.find('_')]
-                extension = os.path.splitext(fff)[1]
-                print('mv ' + fff + ' ' + 'xxx' + vol1 + '/' + basename + '_' + new_name + '_sim' + extension)
-                os.system('mv ' + fff + ' ' + 'xxx' + vol1 + '/' + basename + '_' + new_name + '_sim' + extension)
+
+            if len(iii) > 0 and len(old_files) > 0:
+                p1['galnames'][int(iii)] = new_name
+                p1.to_pickle('xxx' + vol1 + '/gal_catalog.pkl')     # update
+
+                for fff in old_files:
+                    basename = os.path.basename(fff)
+                    basename = basename[:basename.find('_')]
+                    extension = os.path.splitext(fff)[1]
+                    print('mv ' + fff + ' ' + 'xxx' + vol1 + '/' + basename + '_' + new_name + '_sim' + extension)
+                    os.system('mv ' + fff + ' ' + 'xxx' + vol1 + '/' + basename + '_' + new_name + '_sim' + extension)
+
+            else:
+                # probably alraedy updated when we ran code before
+                pass
+
     else:
         overlapped = False
 
@@ -942,6 +950,8 @@ if __name__ == '__main__':
     pp = particles2pd(snapRange=[36],name_prefix='m25n1024_', feedback='s50_new/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
     ggg1, zred = pp.run(savepath='xxx25/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m25', emptyDM=True, caesarRotate=False, LoadHalo=True)
     print(ggg1)
+    with open('ggg1', 'wb') as fp:
+        pickle.dump(ggg1, fp)
 
     from collections import Counter
     c1 = Counter(ggg1)
@@ -949,22 +959,27 @@ if __name__ == '__main__':
     pp = particles2pd(snapRange=[36],name_prefix='m50n1024_', feedback='s50/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
     ggg2, zred = pp.run(savepath='xxx50/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m50', emptyDM=True, caesarRotate=False, LoadHalo=True)
     print(ggg2)
+    with open('ggg2', 'wb') as fp:
+        pickle.dump(ggg2, fp)
     c1.subtract(Counter(ggg2))
 
     # 100
     pp = particles2pd(snapRange=[36],name_prefix='m100n1024_', feedback='s50/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
     ggg3, zred = pp.run(savepath='xxx100/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m100', emptyDM=True, caesarRotate=False, LoadHalo=True)
-    print(ggg3)
+    with open('ggg3', 'wb') as fp:
+        pickle.dump(ggg3, fp)
 
     # rename duplciates between m25 and m50
     overlapped, g25_noduplicate, g2550 = rename_duplicates_across_vol(c1, ggg1, ggg2, '25', '50')
+    assert(len(g2550) + len(g25_noduplicate) == (len(ggg1) + len(ggg2)))
+    with open('ggg1_noduplicated', 'wb') as fp:
+        pickle.dump(g25_noduplicate, fp)
+
     cab = Counter(g2550)
     cab.subtract(Counter(ggg3))
 
     # rename duplciates between m25 + m50 and m100
     overlapped, g2550_noduplicate, g2550100 = rename_duplicates_across_vol(cab, g2550, ggg3, '50', '100')
-    print("Total number of galaxies found from m25 + 50 + 100: ")
-    print(len(g2550100))
 
     # put all the extract DF files together in one directory
     os.system('cp xxx25/* xxx/')
@@ -978,15 +993,30 @@ if __name__ == '__main__':
 
     results = {}
     for kk in p1.keys():
-        results[kk] = np.hstack([p1[kk].values[0], p2[kk].values[0], p3[kk].values[0]])
-    results = pd.DataFrame([results])
+        results[kk] = np.hstack([p1[kk].values, p2[kk].values, p3[kk].values])
+    results = pd.DataFrame(results)
     results.to_pickle('xxx/gal_catalog.pkl')
     _bubu = pd.read_pickle('xxx/gal_catalog.pkl')
 
     # merge ggg
     # to update temp/galaxies/z6_extracted_galaxies file
     g2550100 = g25_noduplicate + g2550_noduplicate + g2550100
+    print("Total number of galaxies found from m25 + 50 + 100: ")
+    print(len(g2550100))
+
+    assert _bubu.shape[0] == len(g2550100)
+
+    # with criteria: part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e5
+    # number of galaxies extracted:
+    # 1867 from m25
+    # 4350 from m50
+    # 1458 from m100
+
     _, _ = pd_bookkeeping(g2550100, np.ones(len(g2550100))*5.93, zCloudy, outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m25m50m100')
+
+
+    # Manually copy the pandas DF to sigame sim_data/
+
 
 
 ''' Ways to select physically meaningful galaxies ....
