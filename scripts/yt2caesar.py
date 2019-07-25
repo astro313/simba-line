@@ -902,7 +902,7 @@ def rename_duplicates_across_vol(count, ggg1, ggg2, vol1='25', vol2='50', verbos
             ggg1.remove(old_n)
 
             # update name in pickle file
-            iii = np.squeeze(np.where(p1['galnames'].values == old_n))
+            iii = p1[p1['galnames'] == old_n].index.values
             old_files = glob.glob('xxx' + vol1 + '/z*' + old_n + '_sim.*')
 
             if len(iii) > 0 and len(old_files) > 0:
@@ -947,27 +947,30 @@ if __name__ == '__main__':
     if not os.path.exists('xxx/'):
         os.mkdir('xxx/')
 
-    pp = particles2pd(snapRange=[36],name_prefix='m25n1024_', feedback='s50_new/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
-    ggg1, zred = pp.run(savepath='xxx25/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m25', emptyDM=True, caesarRotate=False, LoadHalo=True)
-    print(ggg1)
-    with open('ggg1', 'wb') as fp:
-        pickle.dump(ggg1, fp)
+    # pp = particles2pd(snapRange=[36],name_prefix='m25n1024_', feedback='s50_new/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
+    # ggg1, zred = pp.run(savepath='xxx25/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m25', emptyDM=True, caesarRotate=False, LoadHalo=True)
+    # print(ggg1)
+    # with open('ggg1', 'wb') as fp:
+    #     pickle.dump(ggg1, fp)
 
+    ggg1 = pd.read_pickle('ggg1')
     from collections import Counter
     c1 = Counter(ggg1)
 
-    pp = particles2pd(snapRange=[36],name_prefix='m50n1024_', feedback='s50/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
-    ggg2, zred = pp.run(savepath='xxx50/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m50', emptyDM=True, caesarRotate=False, LoadHalo=True)
-    print(ggg2)
-    with open('ggg2', 'wb') as fp:
-        pickle.dump(ggg2, fp)
+    # pp = particles2pd(snapRange=[36],name_prefix='m50n1024_', feedback='s50/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
+    # ggg2, zred = pp.run(savepath='xxx50/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m50', emptyDM=True, caesarRotate=False, LoadHalo=True)
+    # print(ggg2)
+    # with open('ggg2', 'wb') as fp:
+    #     pickle.dump(ggg2, fp)
+    ggg2 = pd.read_pickle('ggg2')
     c1.subtract(Counter(ggg2))
 
     # 100
-    pp = particles2pd(snapRange=[36],name_prefix='m100n1024_', feedback='s50/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
-    ggg3, zred = pp.run(savepath='xxx100/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m100', emptyDM=True, caesarRotate=False, LoadHalo=True)
-    with open('ggg3', 'wb') as fp:
-        pickle.dump(ggg3, fp)
+    # pp = particles2pd(snapRange=[36],name_prefix='m100n1024_', feedback='s50/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
+    # ggg3, zred = pp.run(savepath='xxx100/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m100', emptyDM=True, caesarRotate=False, LoadHalo=True)
+    # with open('ggg3', 'wb') as fp:
+    #     pickle.dump(ggg3, fp)
+    ggg3 = pd.read_pickle('ggg3')
 
     # rename duplciates between m25 and m50
     overlapped, g25_noduplicate, g2550 = rename_duplicates_across_vol(c1, ggg1, ggg2, '25', '50')
