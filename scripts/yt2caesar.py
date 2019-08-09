@@ -923,6 +923,27 @@ def rename_duplicates_across_vol(count, ggg1, ggg2, vol1='25', vol2='50', verbos
                 # probably alraedy updated when we ran code before
                 pass
 
+        if not os.path.exists('xxx' + vol1 + vol2 + '/'):
+            os.mkdir('xxx' + vol1 + vol2 + '/')
+        p2 = pd.read_pickle('xxx' + vol2 + '.gal_catalog.pkl')
+        # combine...
+        results = {}
+        for kk in p1.keys():
+            results[kk] = np.hstack([p1[kk].values, p2[kk].values])
+        results = pd.DataFrame(results)
+        results.to_pickle('xxx' + vol1+vol2 +'/gal_catalog.pkl')
+
+        # symlink simulation files
+        os.chdir('xxx' + vol1 + vol2 + '/')
+        os.system('ln -s ../xxx'+vol1 +'/*.dm')
+        os.system('ln -s ../xxx'+vol1 +'/*.gas')
+        os.system('ln -s ../xxx'+vol1 +'/*.stars')
+
+        os.system('ln -s ../xxx'+vol2 +'/*.dm')
+        os.system('ln -s ../xxx'+vol2 +'/*.gas')
+        os.system('ln -s ../xxx'+vol2 +'/*.stars')
+        os.chdir('../')
+
     else:
         overlapped = False
 
@@ -947,11 +968,8 @@ if __name__ == '__main__':
     if not os.path.exists('xxx50/'):
         os.mkdir('xxx50/')
 
-    if not os.path.exists('xxx/'):
-        os.mkdir('xxx/')
-
     pp = particles2pd(snapRange=[36],name_prefix='m25n1024_', feedback='s50_new/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
-    ggg1, zred = pp.run(savepath='xxx25/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m25', emptyDM=True, caesarRotate=False, LoadHalo=True)
+    ggg1, zred = pp.run(savepath='xxx25/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m25', emptyDM=True, caesarRotate=False, LoadHalo=False)
     print(ggg1)
     with open('ggg1', 'wb') as fp:
         pickle.dump(ggg1, fp)
@@ -961,7 +979,7 @@ if __name__ == '__main__':
     c1 = Counter(ggg1)
 
     pp = particles2pd(snapRange=[36],name_prefix='m50n1024_', feedback='s50/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
-    ggg2, zred = pp.run(savepath='xxx50/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m50', emptyDM=True, caesarRotate=False, LoadHalo=True)
+    ggg2, zred = pp.run(savepath='xxx50/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m50', emptyDM=True, caesarRotate=False, LoadHalo=False)
     print(ggg2)
     with open('ggg2', 'wb') as fp:
         pickle.dump(ggg2, fp)
@@ -970,7 +988,7 @@ if __name__ == '__main__':
 
     # 100
     pp = particles2pd(snapRange=[36],name_prefix='m100n1024_', feedback='s50/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
-    ggg3, zred = pp.run(savepath='xxx100/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m100', emptyDM=True, caesarRotate=False, LoadHalo=True)
+    ggg3, zred = pp.run(savepath='xxx100/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m100', emptyDM=True, caesarRotate=False, LoadHalo=False)
     with open('ggg3', 'wb') as fp:
         pickle.dump(ggg3, fp)
     # ggg3 = pd.read_pickle('ggg3')
@@ -981,28 +999,28 @@ if __name__ == '__main__':
     with open('ggg1_noduplicated', 'wb') as fp:
         pickle.dump(g25_noduplicate, fp)
 
-    cab = Counter(g2550)
+    cab = Counter(g25_noduplicate + g2550)
     cab.subtract(Counter(ggg3))
 
     # rename duplciates between m25 + m50 and m100
-    overlapped, g2550_noduplicate, g2550100 = rename_duplicates_across_vol(cab, g2550, ggg3, '50', '100')
+    overlapped, g2550_noduplicate, g2550100 = rename_duplicates_across_vol(cab, g25_noduplicate + g2550, ggg3, '2550', '100')
 
-    # put all the extract DF files together in one directory
-    os.system('cp xxx25/* xxx/')
-    os.system('cp xxx50/* xxx/')
-    os.system('cp xxx100/* xxx/')
+    # # put all the extract DF files together in one directory
+    # os.system('cp xxx25/* xxx/')
+    # os.system('cp xxx50/* xxx/')
+    # os.system('cp xxx100/* xxx/')
 
-    # merge pickle files containing galaxy properties
-    p1 = pd.read_pickle('xxx25/gal_catalog.pkl')    # m25
-    p2 = pd.read_pickle('xxx50/gal_catalog.pkl')    # m50
-    p3 = pd.read_pickle('xxx100/gal_catalog.pkl')   # m100
+    # # merge pickle files containing galaxy properties
+    # p1 = pd.read_pickle('xxx25/gal_catalog.pkl')    # m25
+    # p2 = pd.read_pickle('xxx50/gal_catalog.pkl')    # m50
+    # p3 = pd.read_pickle('xxx100/gal_catalog.pkl')   # m100
 
-    results = {}
-    for kk in p1.keys():
-        results[kk] = np.hstack([p1[kk].values, p2[kk].values, p3[kk].values])
-    results = pd.DataFrame(results)
-    results.to_pickle('xxx/gal_catalog.pkl')
-    _bubu = pd.read_pickle('xxx/gal_catalog.pkl')
+    # results = {}
+    # for kk in p1.keys():
+    #     results[kk] = np.hstack([p1[kk].values, p2[kk].values, p3[kk].values])
+    # results = pd.DataFrame(results)
+    # results.to_pickle('xxx/gal_catalog.pkl')
+    # _bubu = pd.read_pickle('xxx/gal_catalog.pkl')
 
     # merge ggg
     # to update temp/galaxies/z6_extracted_galaxies file
@@ -1010,7 +1028,7 @@ if __name__ == '__main__':
     print("Total number of galaxies found from m25 + 50 + 100: ")
     print(len(g2550100))
 
-    assert _bubu.shape[0] == len(g2550100)
+    # assert _bubu.shape[0] == len(g2550100)
 
     # with criteria: part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e5
     # number of galaxies extracted:
@@ -1020,9 +1038,12 @@ if __name__ == '__main__':
 
     _, _ = pd_bookkeeping(g2550100, np.ones(len(g2550100))*5.93, zCloudy, outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m25m50m100')
 
-
-    # Manually copy the pandas DF to sigame sim_data/
-
+    print(" **** \n \
+    1/ Manually copy the pandas DF to sigame sim_data/ \n \
+    2/ Manually create sigame ISM_data/ \n \
+    3/ ln paramters_zx.txt file.. \n \
+    4/ update galaxies/z6_extracted_gals_xxx file path... \n \
+    5/ make sure not going to over-write global_results/zx_..._abun_abun file \n ***")
 
 
 ''' Ways to select physically meaningful galaxies ....
