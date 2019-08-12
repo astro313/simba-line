@@ -916,6 +916,9 @@ def rename_duplicates_across_vol(count, ggg1, ggg2, vol1='25', vol2='50', verbos
                     print('mv ' + fff + ' ' + 'xxx' + vol1 + '/' + basename + '_' + new_name + '_sim' + extension)
                     os.system('mv ' + fff + ' ' + 'xxx' + vol1 + '/' + basename + '_' + new_name + '_sim' + extension)
 
+                    blah = os.system('ls ' + 'xxx' + vol1 + '/' + basename + '_' + new_name + '_sim' + extension)
+                    if blah != 0:
+                        import pdb; pdb.set_trace()
                 # update galaxies/z6_extracted_gals_xxx file
                 # CURRENTLY need to UPDATE MANUALLY
 
@@ -925,7 +928,7 @@ def rename_duplicates_across_vol(count, ggg1, ggg2, vol1='25', vol2='50', verbos
 
         if not os.path.exists('xxx' + vol1 + vol2 + '/'):
             os.mkdir('xxx' + vol1 + vol2 + '/')
-        p2 = pd.read_pickle('xxx' + vol2 + '.gal_catalog.pkl')
+        p2 = pd.read_pickle('xxx' + vol2 + '/gal_catalog.pkl')
         # combine...
         results = {}
         for kk in p1.keys():
@@ -935,13 +938,19 @@ def rename_duplicates_across_vol(count, ggg1, ggg2, vol1='25', vol2='50', verbos
 
         # symlink simulation files
         os.chdir('xxx' + vol1 + vol2 + '/')
-        os.system('ln -s ../xxx'+vol1 +'/*.dm')
-        os.system('ln -s ../xxx'+vol1 +'/*.gas')
-        os.system('ln -s ../xxx'+vol1 +'/*.stars')
+        os.system('rm *.dm *.star *.gas')
 
-        os.system('ln -s ../xxx'+vol2 +'/*.dm')
-        os.system('ln -s ../xxx'+vol2 +'/*.gas')
-        os.system('ln -s ../xxx'+vol2 +'/*.stars')
+        for i in glob.glob('../xxx' + vol1 + '/*.dm'):
+            basename, extension = os.path.splitext(i)
+            os.system('cp ' + basename + '.dm .')
+            os.system('cp ' + basename + '.gas .')
+            os.system('cp ' + basename + '.star .')
+
+        for i in glob.glob('../xxx' + vol2 + '/*.dm'):
+            basename, extension = os.path.splitext(i)
+            os.system('cp ' + basename + '.dm .')
+            os.system('cp ' + basename + '.gas .')
+            os.system('cp ' + basename + '.star .')
         os.chdir('../')
 
     else:
@@ -983,6 +992,7 @@ if __name__ == '__main__':
     print(ggg2)
     with open('ggg2', 'wb') as fp:
         pickle.dump(ggg2, fp)
+
     # ggg2 = pd.read_pickle('ggg2')
     c1.subtract(Counter(ggg2))
 
@@ -1024,13 +1034,17 @@ if __name__ == '__main__':
 
     # merge ggg
     # to update temp/galaxies/z6_extracted_galaxies file
-    g2550100 = g25_noduplicate + g2550_noduplicate + g2550100
+    # print(len(g25_noduplicate), len(g2550_noduplicate), len(g2550100))
+    # 1865 6215 1460
+    # import pdb; pdb.set_trace()
+    g2550100 = g2550_noduplicate + g2550100
     print("Total number of galaxies found from m25 + 50 + 100: ")
     print(len(g2550100))
+    _bubu = pd.read_pickle('xxx2550100/gal_catalog.pkl')
 
-    # assert _bubu.shape[0] == len(g2550100)
+    assert _bubu.shape[0] == len(g2550100)
 
-    # with criteria: part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e5
+    # with criteria: part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4
     # number of galaxies extracted:
     # 1867 from m25
     # 4350 from m50
