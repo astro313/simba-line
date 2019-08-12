@@ -1014,29 +1014,8 @@ if __name__ == '__main__':
 
     # rename duplciates between m25 + m50 and m100
     overlapped, g2550_noduplicate, g2550100 = rename_duplicates_across_vol(cab, g25_noduplicate + g2550, ggg3, '2550', '100')
+    os.system('rm -rf xxx2550')
 
-    # # put all the extract DF files together in one directory
-    # os.system('cp xxx25/* xxx/')
-    # os.system('cp xxx50/* xxx/')
-    # os.system('cp xxx100/* xxx/')
-
-    # # merge pickle files containing galaxy properties
-    # p1 = pd.read_pickle('xxx25/gal_catalog.pkl')    # m25
-    # p2 = pd.read_pickle('xxx50/gal_catalog.pkl')    # m50
-    # p3 = pd.read_pickle('xxx100/gal_catalog.pkl')   # m100
-
-    # results = {}
-    # for kk in p1.keys():
-    #     results[kk] = np.hstack([p1[kk].values, p2[kk].values, p3[kk].values])
-    # results = pd.DataFrame(results)
-    # results.to_pickle('xxx/gal_catalog.pkl')
-    # _bubu = pd.read_pickle('xxx/gal_catalog.pkl')
-
-    # merge ggg
-    # to update temp/galaxies/z6_extracted_galaxies file
-    # print(len(g25_noduplicate), len(g2550_noduplicate), len(g2550100))
-    # 1865 6215 1460
-    # import pdb; pdb.set_trace()
     g2550100 = g2550_noduplicate + g2550100
     print("Total number of galaxies found from m25 + 50 + 100: ")
     print(len(g2550100))
@@ -1060,12 +1039,4 @@ if __name__ == '__main__':
     5/ make sure not going to over-write global_results/zx_..._abun_abun file \n ***")
 
 
-''' Ways to select physically meaningful galaxies ....
 
-ghaloall = np.array(readsnap(snap,'HaloID','gas',suppress=1,nth=nskip),dtype=int)  # FOF halo ID from snapshot
-gas_select = ((gnh>0.1)&(ghaloall>0))  # selects gas to use
-
-if gal.masses['bh'] <= 1.e6: continue    # a way to select gal w/ BH
-
-
-'''
