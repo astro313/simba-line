@@ -978,8 +978,8 @@ if __name__ == '__main__':
         os.mkdir('xxx50/')
 
     pp = particles2pd(snapRange=[36],name_prefix='m25n1024_', feedback='s50_new/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
-    ggg1, zred = pp.run(savepath='xxx25/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m25', emptyDM=True, caesarRotate=False, LoadHalo=False)
-    print(ggg1)
+    ggg1, zred = pp.run(savepath='xxx25/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m25', emptyDM=True, caesarRotate=False, LoadHalo=True)
+
     with open('ggg1', 'wb') as fp:
         pickle.dump(ggg1, fp)
 
@@ -988,8 +988,7 @@ if __name__ == '__main__':
     c1 = Counter(ggg1)
 
     pp = particles2pd(snapRange=[36],name_prefix='m50n1024_', feedback='s50/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
-    ggg2, zred = pp.run(savepath='xxx50/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m50', emptyDM=True, caesarRotate=False, LoadHalo=False)
-    print(ggg2)
+    ggg2, zred = pp.run(savepath='xxx50/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m50', emptyDM=True, caesarRotate=False, LoadHalo=True)
     with open('ggg2', 'wb') as fp:
         pickle.dump(ggg2, fp)
 
@@ -998,7 +997,7 @@ if __name__ == '__main__':
 
     # 100
     pp = particles2pd(snapRange=[36],name_prefix='m100n1024_', feedback='s50/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
-    ggg3, zred = pp.run(savepath='xxx100/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m100', emptyDM=True, caesarRotate=False, LoadHalo=False)
+    ggg3, zred = pp.run(savepath='xxx100/', outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m100', emptyDM=True, caesarRotate=False, LoadHalo=True)
     with open('ggg3', 'wb') as fp:
         pickle.dump(ggg3, fp)
     # ggg3 = pd.read_pickle('ggg3')
