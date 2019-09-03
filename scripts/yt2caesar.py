@@ -438,8 +438,9 @@ class particles2pd(object):
             gas_vel = group_part_by_galaxy(gas_vel_p, gal, ptype='gas')
 
             if caesarRotate:
-                gas_pos = caesar.utils.rotator(gas_pos, gal.rotation_angles['ALPHA'].astype('float64'), gal.rotation_angles['BETA'].astype('float64'))
-                gas_vel = caesar.utils.rotator(gas_vel,
+                gas_pos = caesar.utils.rotator(gas_pos.astype('float64'), gal.rotation_angles['ALPHA'], gal.rotation_angles['BETA'])
+
+                gas_vel = caesar.utils.rotator(gas_vel.astype('float64'),
                                               np.float64(gal.rotation_angles['ALPHA']),
                                               np.float64(gal.rotation_angles['BETA']))
                 ff = lambda x: x.d
@@ -515,11 +516,11 @@ class particles2pd(object):
             star_vel = group_part_by_galaxy(star_vel_p, gal, ptype='star')
 
             if caesarRotate:
-                star_pos = caesar.utils.rotator(star_pos,
+                star_pos = caesar.utils.rotator(star_pos.astype('float64'),
                                    np.float64(gal.rotation_angles['ALPHA']),
                                    np.float64(gal.rotation_angles['BETA']))
 
-                star_vel = caesar.utils.rotator(star_vel,
+                star_vel = caesar.utils.rotator(star_vel.astype('float64'),
                                     np.float64(gal.rotation_angles['ALPHA']),
                                     np.float64(gal.rotation_angles['BETA']))
 
