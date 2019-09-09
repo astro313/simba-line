@@ -84,51 +84,6 @@ ngal = np.asarray([len(hm) for hm in halomags])
 
 
 # plot
-xp = np.log10(mh)
-yp = np.log10(ngal)
-posp = pos
-
-bins = 8
-boxsize = sim.simulation.boxsize
-print(boxsize, vol_mpc)
-
-
-# # ---- added ----
-# bin_edges = np.arange(0.999 * min(xp), 1.001 * max(xp), (max(xp) - min(xp)) / (bins))
-# bin_means, bin_edges, _ = stats.binned_statistic(xp, yp, bins=bins, statistic='mean')
-# bin_cent = 0.5 * (bin_edges[1:] + bin_edges[:-1])
-# print(bin_means)
-# # if np.isinf(np.abs(bin_means)).any():
-# #    import pdb; pdb.set_trace()
-
-# plt.figure()
-# plt.plot(bin_cent, bin_means, '-', linewidth=2, color='k', label=None)
-
-
-# # put galaxies into octants
-# pos = np.floor(posp / (0.5 * boxsize)).astype(np.int)
-# gal_index = pos[:, 0] + pos[:, 1] * 2 + pos[:, 2] * 4
-
-# bin_oct = np.zeros((abs(bins), 8))
-# for i0 in range(8):
-#     mh = xp[gal_index == i0]
-#     ngal = yp[gal_index == i0]
-#     bin_oct[:, i0], bin_edges, binnumber = stats.binned_statistic(mh, ngal, bins=bin_edges, statistic='mean')
-# bin_oct[:, i0].shape
-# bin_oct = np.ma.masked_invalid(bin_oct)
-# var = np.ma.std(bin_oct, axis=1)
-# print(var)
-# plt.errorbar(bin_cent, bin_means, yerr=[
-#             var, var], fmt='o', linewidth=2, color='k')
-# plt.savefig('test.pdf')
-
-# import function as fu
-# import pdb; pdb.set_trace()
-# x, y, var = fu.cosmic_variance(mh, pos, boxsize, boxsize, nbin=8, minmass=-1)
-# print(var)
-# # ---------------
-
-
 plt.close('all')
 plt.figure()
 import plotmedian as pm
