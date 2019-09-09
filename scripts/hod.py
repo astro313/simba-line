@@ -44,17 +44,18 @@ from astropy.cosmology import FlatLambdaCDM
 from scipy import stats
 
 
-inoutName = {'m50n512_036': '/mnt/ceph/users/daisyleung/simba/sim/m50n512/s50/Groups/m50n512_036.hdf5',
+inoutName = {
+            'm50n512_036': '/mnt/ceph/users/daisyleung/simba/sim/m50n512/s50/Groups/m50n512_036.hdf5',
             'm100n1024_036': '/mnt/ceph/users/daisyleung/simba/sim/m100n1024/s50/Groups/m100n1024_036.hdf5',
-#            'm25n256_036': '/mnt/ceph/users/daisyleung/simba/sim/m25n256/s50_new/Groups/m25n256_036.hdf5',
             'm50n1024_036': '/mnt/ceph/users/daisyleung/simba/sim/m50n1024/s50/Groups/m50n1024_036.hdf5',
-            'm25n1024_036': '/mnt/ceph/users/daisyleung/simba/sim/m25n1024/s50_new/Groups/m25n1024_036.hdf5'
+            'm25n1024_036': '/mnt/ceph/users/daisyleung/simba/sim/m25n1024/s50_new/Groups/m25n1024_036.hdf5',
+            'm25n256_036': '/mnt/ceph/users/daisyleung/simba/sim/m25n256/s50/Groups/m25n256_036.hdf5'
             }
 
-nbin = 20
+nbin = 8
 
 for k, infile in inoutName.items():
-    figname = k + '_hod.pdf'
+    figname = k + '_hod_bin' + str(nbin) + '.pdf'
 
     sim = caesar.load(infile) # load caesar file
     mlim = 64*sim.simulation.critical_density.value*sim.simulation.boxsize.value**3*sim.simulation.omega_matter/sim.simulation.effective_resolution**3 # galaxy mass resolution limit in DM particle
