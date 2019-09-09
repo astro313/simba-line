@@ -100,9 +100,15 @@ def massFunc(objs, labels, ax, jwind):
             elif curType == 'Halo':
                 mass = np.array([h.masses['virial'].d for h in objs[j].halos])
                 galpos = np.array([h.pos.d for h in objs[j].halos])
+
+            # remove SFR = 0.0
+            mask = mass > 0
+            mass = mass[mask]
+            galpos = galpos[mask, :]
+
             volume = objs[j].simulation.boxsize.to('Mpccm').d**3
             x, y, sig = fu.cosmic_variance(
-                mass, galpos, objs[j].simulation.boxsize, volume, nbin=16, minmass=-1)
+                mass, galpos, objs[j].simulation.boxsize, volume, nbin=16, minmass=-3)
             ncol = int((len(objs) - 1) / nrowmax + 1)
             icol = int(j / nrowmax)
             irow = int(j % nrowmax)
@@ -132,7 +138,7 @@ def massFunc(objs, labels, ax, jwind):
     ax0.legend(loc='best', fontsize=13)
     # ax0.annotate('z=%g' % np.round(objs[j].simulation.redshift, 1), xy=(
     #     0.8, 0.75), xycoords='axes fraction', size=12, bbox=dict(boxstyle="round", fc="w"))
-    plt.title('z=%g' % np.round(objs[j].simulation.redshift, 1))
+    plt.title(r'$z$ = %g' % np.round(objs[j].simulation.redshift, 1))
     return None
 
 colors = ('b', 'g', 'm', 'c', 'k')
@@ -160,7 +166,7 @@ massFunc(sims, labels, ax, ii)
 plt.minorticks_on()
 plt.xlabel(r'$\log$ SFR $[M_\odot$ yr$^{-1}]$', fontsize=16)
 plt.ylabel(r'$\log \Phi$ [Mpc$^{-3}$]',fontsize=16)
-plt.xlim(-1, 3)
+plt.xlim(-3, 3)
 plt.subplots_adjust(hspace=.0)
 
 figname = 'sfrfcn_test.pdf'
