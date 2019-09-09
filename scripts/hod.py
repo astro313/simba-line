@@ -52,7 +52,8 @@ inoutName = {
             'm25n256_036': '/mnt/ceph/users/daisyleung/simba/sim/m25n256/s50/Groups/m25n256_036.hdf5'
             }
 
-nbin = 8
+nbin = 20
+allhalos = True    # False
 
 for k, infile in inoutName.items():
     figname = k + '_hod_bin' + str(nbin) + '.pdf'
@@ -66,13 +67,17 @@ for k, infile in inoutName.items():
     myobjs = sim.galaxies
     cents = np.asarray([i for i in myobjs if i.central==1])
     Mhmin = np.min( np.asarray([i.halo.masses['total'] for i in cents]) ) # smallest halo to host a galaxy in each cental halo
-    halos = np.asarray([i for i in sim.halos if i.masses['total']>Mhmin])
+    if not allhalos:
+        # only include halos (central + satellites) that are above the min. central halo mass
+        halos = np.asarray([i for i in sim.halos if i.masses['total']>Mhmin])
+    else:
+        figname = k + '_hod_bin' + str(nbin) + '_allhalos.pdf'
+        halos = np.asarray([i for i in sim.halos])
+
     mh = np.asarray([i.masses['total'] for i in halos])
 
     pos = np.asarray([i.pos for i in halos])
     print('Mhalo,min=',np.log10(Mhmin),' Ncents=',len(cents),' Nhalos=',len(halos))
-    # Mhalo,min= 9.494088135336268  Ncents= 9924  Nhalos= 64988
-    # Mhalo,min= 10.45835996211413  Ncents= 3825  Nhalos= 24193
 
     ms = np.asarray([i.masses['stellar'] for i in myobjs])
     logms = np.log10(ms)
@@ -90,7 +95,7 @@ for k, infile in inoutName.items():
     plt.close('all')
     plt.figure()
     import plotmedian as pm
-    # I just estimate it based on the spread on individual quantities over 8 octants.  8 is purely for convenience, and seemed like a sufficiently large number to get a decent variance.  I’ve never compared to calculating it from the correlation function, which would probably be more accurate.
+    # I just estimate it based on the spread on individual quantities over 8 octants (defined inside plotmedian).  8 is purely for convenience, and seemed like a sufficiently large number to get a decent variance.  I’ve never compared to calculating it from the correlation function, which would probably be more accurate.
     pm.plotmedian(np.log10(mh),np.log10(ngal),ltype='-',lw=2,
                     ax=plt,
                     bins=nbin,
