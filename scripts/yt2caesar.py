@@ -443,22 +443,13 @@ class particles2pd(object):
                 gas_vel = caesar.utils.rotator(gas_vel.astype('float64'),
                                               np.float64(gal.rotation_angles['ALPHA']),
                                               np.float64(gal.rotation_angles['BETA']))
-                ff = lambda x: x.d
-                gas_x = ff(gas_pos[:, 0])
-                gas_y = ff(gas_pos[:, 1])
-                gas_z = ff(gas_pos[:, 2])
+            gas_x = gas_pos[:, 0]
+            gas_y = gas_pos[:, 1]
+            gas_z = gas_pos[:, 2]
 
-                gas_vx = ff(gas_vel[:,0])
-                gas_vy = ff(gas_vel[:,1])
-                gas_vz = ff(gas_vel[:,2])
-            else:
-                gas_x = gas_pos[:, 0]
-                gas_y = gas_pos[:, 1]
-                gas_z = gas_pos[:, 2]
-
-                gas_vx = gas_vel[:,0]
-                gas_vy = gas_vel[:,1]
-                gas_vz = gas_vel[:,2]
+            gas_vx = gas_vel[:,0]
+            gas_vy = gas_vel[:,1]
+            gas_vz = gas_vel[:,2]
 
             gas_f_H2 = group_part_by_galaxy(gfH2_p, gal, ptype='gas')
             gas_f_neu = group_part_by_galaxy(gfHI_p, gal, ptype='gas')   # f_neu
@@ -523,22 +514,13 @@ class particles2pd(object):
                 star_vel = caesar.utils.rotator(star_vel.astype('float64'),
                                     np.float64(gal.rotation_angles['ALPHA']),
                                     np.float64(gal.rotation_angles['BETA']))
+            star_x = star_pos[:, 0]
+            star_y = star_pos[:, 1]
+            star_z = star_pos[:, 2]
 
-                star_x = ff(star_pos[:, 0])
-                star_y = ff(star_pos[:, 1])
-                star_z = ff(star_pos[:, 2])
-
-                star_vx = ff(star_vel[:,0])
-                star_vy = ff(star_vel[:,1])
-                star_vz = ff(star_vel[:,2])
-            else:
-                star_x = star_pos[:, 0]
-                star_y = star_pos[:, 1]
-                star_z = star_pos[:, 2]
-
-                star_vx = star_vel[:,0]
-                star_vy = star_vel[:,1]
-                star_vz = star_vel[:,2]
+            star_vx = star_vel[:,0]
+            star_vy = star_vel[:,1]
+            star_vz = star_vel[:,2]
 
             star_Z =  group_part_by_galaxy(pmetarray, gal, ptype='star')
 
