@@ -302,8 +302,10 @@ if __name__ == '__main__':
         # add Jackknife error bars; need to run on RUSTY!!!
         galpos = get_xyz_from_sigamePD(galgal['galnames'].values,
                                        path='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/z6_data_files/particle_data/sim_data_m2550100_7675/',
-                                       physical=True,
+                                       physical=True,   # doesn't actually matter
                                        redshift=5.93)
+
+        galpos /= 1.e3          # cMpc, doesn't actually matter, but just to be consistent w/ other codes
 
         # ad-hoc
         galpos25 = galpos[:1868]
