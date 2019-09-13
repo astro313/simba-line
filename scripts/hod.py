@@ -1,3 +1,12 @@
+"""
+
+
+Need to apply the same absolute mass cut for all the volumes
+
+
+
+"""
+
 
 import caesar
 import matplotlib as mpl
@@ -45,28 +54,75 @@ from scipy import stats
 
 
 inoutName = {
-            'm50n512_036': '/mnt/ceph/users/daisyleung/simba/sim/m50n512/s50/Groups/m50n512_036.hdf5',
+#             'm50n512_036': '/mnt/ceph/users/daisyleung/simba/sim/m50n512/s50/Groups/m50n512_036.hdf5',
             'm100n1024_036': '/mnt/ceph/users/daisyleung/simba/sim/m100n1024/s50/Groups/m100n1024_036.hdf5',
             'm50n1024_036': '/mnt/ceph/users/daisyleung/simba/sim/m50n1024/s50/Groups/m50n1024_036.hdf5',
             'm25n1024_036': '/mnt/ceph/users/daisyleung/simba/sim/m25n1024/s50_new/Groups/m25n1024_036.hdf5',
-            'm25n256_036': '/mnt/ceph/users/daisyleung/simba/sim/m25n256/s50/Groups/m25n256_036.hdf5'
+#             'm25n256_036': '/mnt/ceph/users/daisyleung/simba/sim/m25n256/s50/Groups/m25n256_036.hdf5'
             }
 
 nbin = 20
-allhalos = True    # False
+allhalos = False    # apply same mass cut to all volumes
+
+
+def get_Mhmin(sim):
+
+    mlim = 64*sim.simulation.critical_density.value*sim.simulation.boxsize.value**3*sim.simulation.omega_matter/sim.simulation.effective_resolution**3 # galaxy mass resolution limit in DM particle
+
+    myobjs = sim.galaxies
+    cents = np.asarray([i for i in myobjs if i.central==1])
+    Mhmin = np.min( np.asarray([i.halo.masses['total'] for i in cents]) ) # smallest halo to host a galaxy in each cental halo
+
+    return mlim, Mhmin
+
+
+MhminList = {}
+mlimList = {}
+ssim = {}
+for k, infile in inoutName.items():
+    ssim[k] = caesar.load(infile)
+    mlim, Mhmin = get_Mhmin(ssim[k])
+    MhminList[k] = Mhmin
+    mlimList[k] = mlim
+print(mlimList)
+print(MhminList)
+
+# {'m100n1024_036': 733801267033.7322, 'm50n1024_036': 91725158379.21652, 'm25n1024_036': 11465644797.402065}
+
+# In [20]: for i, v in mlimList.items(): print(v/1.e10)
+# 73.38012670337322
+# 9.172515837921653
+# 1.1465644797402066
+
+
+# {'m100n1024_036': 28731609959.162155, 'm50n1024_036': 3119522593.0038266, 'm25n1024_036': 487767463.6030431}
+
+# In [21]: for i, v in MhminList.items(): print(v/1.e10)
+# 2.8731609959162157
+# 0.3119522593003827
+# 0.04877674636030431
+
 
 for k, infile in inoutName.items():
     figname = k + '_hod_bin' + str(nbin) + '.pdf'
 
-    sim = caesar.load(infile) # load caesar file
-    mlim = 64*sim.simulation.critical_density.value*sim.simulation.boxsize.value**3*sim.simulation.omega_matter/sim.simulation.effective_resolution**3 # galaxy mass resolution limit in DM particle
+    # sim = caesar.load(infile) # load caesar file
+    sim = ssim[k]
+    Mhmin = MhminList[k]
 
     vol_mpc = sim.simulation.boxsize.to('Mpccm').d**3
     cosmo = FlatLambdaCDM(H0=100*sim.simulation.hubble_constant, Om0=sim.simulation.omega_matter, Ob0=sim.simulation.omega_baryon,Tcmb0=2.73)
 
     myobjs = sim.galaxies
     cents = np.asarray([i for i in myobjs if i.central==1])
-    Mhmin = np.min( np.asarray([i.halo.masses['total'] for i in cents]) ) # smallest halo to host a galaxy in each cental halo
+
+    # if get the same Mlim across all volumes!!!
+    # _mlim = np.array(mlimList[max(mlimList, key=mlimList.get)], \
+    #                 MhminList[max(MhminList, key=MhminList.get)])
+    # Mhmin = np.max(_mlim)
+    # print(Mhmin)
+    Mhmin = 2.8731609959162157E+10
+
     if not allhalos:
         # only include halos (central + satellites) that are above the min. central halo mass
         halos = np.asarray([i for i in sim.halos if i.masses['total']>Mhmin])
