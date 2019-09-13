@@ -13,7 +13,7 @@ if not os.path.exists(outDIR):
     os.mkdir(outDIR)
 
 pp = particles2pd(snapRange=[int(ss)],name_prefix='m50n1024_', feedback='s50/', zCloudy=zCloudy, user='Daisy', part_threshold=64, sfr_threshold=0.1, denseGasThres=1.e4)
-ggg2, zred = pp.run(savepath=outDIR, outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m50_n1024', emptyDM=True, caesarRotate=True, LoadHalo=True)
+ggg2, zred = pp.run(savepath=outDIR, outname='/mnt/home/daisyleung/Downloads/SIGAME_dev/sigame/temp/galaxies/z' + str(int(zCloudy)) + '_extracted_gals_m50_n1024_ss' + ss, emptyDM=True, caesarRotate=True, LoadHalo=True)
 
 print(" **** \n \
 1/ Manually copy the pandas DF to sigame sim_data/ \n \
