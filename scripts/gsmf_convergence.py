@@ -43,7 +43,7 @@ import function as fu
 import OBSSMF as obs
 
 nrowmax = 3
-
+fill_between = True
 
 def massFunc(objs, labels, ax, jwind, fill_between=False, decomSFQ=False):
     """
@@ -137,7 +137,8 @@ def massFunc(objs, labels, ax, jwind, fill_between=False, decomSFQ=False):
 
 
 colors = ('b', 'g', 'm', 'c', 'k')
-simName = ['m25n256', 'm25n1024', 'm50n512', 'm50n1024', 'm100n1024']
+# simName = ['m25n256', 'm25n1024', 'm50n512', 'm50n1024', 'm100n1024']
+simName = ['m25n1024', 'm50n1024', 'm100n1024']
 
 sims = []
 labels = []
@@ -155,7 +156,7 @@ nrow = 1
 
 fig, ax = plt.subplots()
 TYPES = ['GSMF']
-massFunc(sims, labels, ax, ii, fill_between=False, decomSFQ=False)
+massFunc(sims, labels, ax, ii, fill_between=fill_between, decomSFQ=False)
 
 
 plt.minorticks_on()
@@ -164,5 +165,8 @@ plt.xlabel(r'$\log M_* [M_\odot]$',fontsize=16)
 plt.ylabel(r'$\log \Phi$ [Mpc$^{-3}$]',fontsize=16)
 plt.subplots_adjust(hspace=.0)
 
-figname = 'gsmf_test.pdf'
+if fill_between:
+    figname = 'gsmf_test_fill.pdf'
+else:
+    figname = 'gsmf_test.pdf'
 plt.savefig(figname, bbox_inches='tight')
