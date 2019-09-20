@@ -49,6 +49,7 @@ import caesar
 import function as fu
 
 nrowmax = 3
+fill_between = True
 
 
 def sfrf_data(zbin, ax):
@@ -84,7 +85,7 @@ def sfrf_data(zbin, ax):
     return
 
 
-def massFunc(objs, labels, ax, jwind):
+def massFunc(objs, labels, ax, jwind, fill_between=True):
     for j in range(0, len(objs)):
         for curType in TYPES:
             galpos = np.array([g.pos.d for g in objs[j].galaxies])
@@ -131,8 +132,22 @@ def massFunc(objs, labels, ax, jwind):
             #          color=colors[j], label=labels[j])
             elo = sig
             ehi = sig
-            ax0.errorbar(np.log10(x) + j * 0.001, np.log10(y),
-                         yerr=[elo, ehi], color=colors[j], label=labels[j])
+
+
+            if fill_between:
+                ax0.plot(np.log10(x) + j * 0.001, np.log10(y), '--',
+                     color=colors[j])
+                ax0.fill_between(np.log10(x) + j * 0.001,
+                                 np.log10(y) - elo,
+                                np.log10(y) + ehi,
+                                facecolor=colors[j], alpha=0.5,
+                                interpolate=True, label=labels[j])
+            else:
+                ax0.errorbar(np.log10(x)+j*0.001,
+                             np.log10(y),
+                             yerr=[elo, ehi],
+                             color=colors[j], label=labels[j])
+
 
     sfrf_data(objs[j].simulation.redshift, ax0)
     ax0.legend(loc='best', fontsize=13)
@@ -142,7 +157,8 @@ def massFunc(objs, labels, ax, jwind):
     return None
 
 colors = ('b', 'g', 'm', 'c', 'k')
-simName = ['m25n256', 'm25n1024', 'm50n512', 'm50n1024', 'm100n1024']
+# simName = ['m25n256', 'm25n1024', 'm50n512', 'm50n1024', 'm100n1024']
+simName = ['m25n1024', 'm50n1024', 'm100n1024']
 
 sims = []
 labels = []
@@ -169,7 +185,10 @@ plt.ylabel(r'$\log \Phi$ [Mpc$^{-3}$]',fontsize=16)
 plt.xlim(-3, 3)
 plt.subplots_adjust(hspace=.0)
 
-figname = 'sfrfcn_test.pdf'
+if fill_between:
+    figname = 'sfrfcn_test_fill.pdf'
+else:
+    figname = 'sfrfcn_test.pdf'
 plt.savefig(figname, bbox_inches='tight')
 
 
