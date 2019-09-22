@@ -441,6 +441,9 @@ def setup_paths(box):
     elif box == '50':
         raw_sim_name_prefix = 'snap_m50n1024_'
         name_prefix = 'm50n1024_'
+    elif box =='100':
+        raw_sim_name_prefix = 'snap_m100n1024_'
+        name_prefix = 'm100n1024_'
 
     host = socket.gethostname()
     if 'ursa' in host:
@@ -458,6 +461,11 @@ def setup_paths(box):
             # m50 box
             raw_sim_dir = '/mnt/ceph/users/daisyleung/simba/sim/m50n1024/s50/'
             caesar_dir = '/mnt/ceph/users/daisyleung/simba/sim/m50n1024/s50/Groups/'
+        elif box == '100':
+            # m100 box
+            raw_sim_dir = '/mnt/ceph/users/daisyleung/simba/sim/m100n1024/s50/'
+            caesar_dir = '/mnt/ceph/users/daisyleung/simba/sim/m100n1024/s50/Groups/'
+
 
         redshiftFile = '/mnt/ceph/users/daisyleung/simba/gizmo-extra/outputs_boxspace50.info'
 
@@ -596,11 +604,11 @@ if __name__ == '__main__':
     snapRange = [36]    # don't put 036
     zCloudy = 6
     combineBoxes = True
-    box = '25'
+    box = '100'
 
     if combineBoxes:
-        outName = 'm25m50n1024_036.txt'
-        combine_galinfo_from_boxes(['snap_m25n1024_036_top17801.txt', 'snap_m50n1024_036_top12280.txt'], outName)
+        outName = 'm25m50m100n1024_036.txt'
+        combine_galinfo_from_boxes(['snap_m25n1024_036_top17801.txt', 'snap_m50n1024_036_top12280.txt', 'snap_m100n1024_036_top4275.txt'], outName)
 
         savedir = '../plots/' + str(outName[:outName.find('.txt')]) + '/'
         make_fundamental_plots(outName, savedir)
