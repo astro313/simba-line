@@ -123,13 +123,13 @@ def schetcher(phistar, Lstar, alpha, Lmin=5., Lmax=9., nbin=100):
 def oplot_popping16_Fig9(fig, ax, nbin=30, alpha=-1.77, logLstar=7.80, logphistar=-2.95):
     # for z=6
     x, y = schetcher(10**logphistar, 10**logLstar, alpha, nbin=nbin)
-    ax.plot(np.log10(x), np.log10(y), '--', label='Popping+16')
+    ax.plot(np.log10(x), np.log10(y), '--', color='darkorange', label='Popping+16')
     return fig, ax
 
 def oplot_popping19(fig, ax, fname='../../literature/popping19_ciiLF_z6/z6.txt'):
     ### Lsun, /cMpc^3
     x, y = np.loadtxt(fname, unpack=True)
-    ax.plot(x, np.log10(y), '--', label='Popping+19')
+    ax.plot(x, np.log10(y), '--', color='indigo', label='Popping+19')
     return fig, ax
 
 
@@ -147,6 +147,7 @@ def plot_this_work(mass, cvolume, fig=None, ax=None, nbin=10,
 
         fig, ax = oplot_popping16_Fig9(fig, ax)
         fig, ax = oplot_popping19(fig, ax, fname='z6.txt')
+        fig, ax = plot_Hemmati17_Capak15(fig, ax, fname='Hemmati17_z6.txt')
 
     if errorbar:
         if method == 'jackknife':
@@ -185,14 +186,30 @@ def plot_this_work(mass, cvolume, fig=None, ax=None, nbin=10,
     if saveFig:
         ax.set_ylabel(r'$\log \Phi$ [h$^3$ Mpc$^{-3}$]',fontsize=16)
         ax.set_xlabel(r'$\log L_{\rm [CII]} [L_\odot]$',fontsize=16)
-        ax.set_ylim([-6, 0.1])
+        ax.set_ylim([-6.3, 0.2])
         # ax.set_xlim([5.5, 9.])
-        plt.legend(loc='best')
+        plt.legend(loc='best', fontsize=13)
         plt.title('[CII] LF')
         plt.minorticks_on()
         plt.subplots_adjust(left=0.1, hspace=.0)
         plt.savefig('./CIILF.pdf',bbox_inches='tight')
 
+    return fig, ax
+
+
+def plot_Hemmati17_Capak15(fig, ax, fname='../../literature/Hemmati17_z6.txt'):
+    ### Lsun, /cMpc^3,
+    logLcii, phi, phiup, philow = np.loadtxt(fname, unpack=True)
+    ax.errorbar(logLcii, np.log10(phi),
+                yerr=[0.424 * (phi - philow)/phi, 0.424 * (phiup - phi)/phi],
+                label='Hemmati+17',
+                alpha=0.95,
+                marker='o',
+                color='green',
+                markeredgecolor='black',
+                markeredgewidth=1.0,
+                linestyle='None'
+                )
     return fig, ax
 
 
@@ -315,16 +332,16 @@ if __name__ == '__main__':
         fig, ax = plot_this_work(mass25, cvolume25, nbin=10,
                                  errorbar=True, galpos=galpos25,
                                  minmass=4.5, saveFig=False,
-                                 label='This Work; m25n1024', color='r')
+                                 label='Simba-25', color='r')
 
         fig, ax = plot_this_work(mass50, cvolume50, fig=fig, ax=ax,
                                  nbin=10, errorbar=True, galpos=galpos50,
                                  minmass=6.2, saveFig=False,
-                                 label='This Work; m50n1024', color='b')
+                                 label='Simba-50', color='b')
 
         plot_this_work(mass100, cvolume100, fig=fig, ax=ax, nbin=10,
                        errorbar=True, galpos=galpos100, minmass=7.,
-                       label='This Work; m100n1024', color='k')
+                       label='Simba-100', color='k')
 
     else:
         raise NotImplementedError("....")
