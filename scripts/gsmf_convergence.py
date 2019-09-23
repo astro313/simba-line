@@ -40,15 +40,19 @@ import OBSSMF as obs
 nrowmax = 3
 fill_between = True
 
-def massFunc(objs, labels, ax, jwind, fill_between=False, decomSFQ=False):
+def massFunc(objs, labels, ax, jwind, fill_between=False, addvlineMassLimit=False, decomSFQ=False):
     """
     fill_between: bool
         whether to use fill_between or error bars
+
+    addvlineMassLimit: bool
+        whether to add vertical lines to indicate the minimum mass resolution we are using to define a resolved galaxy
 
     decomSFQ: bool
         whether to plot SF galaxies and Quenched galaxies (based on sSFR) separately.
 
     """
+
     for j in range(0, len(objs)):
         for curType in TYPES:
             galpos = np.array([g.pos.d for g in objs[j].galaxies])
@@ -64,6 +68,12 @@ def massFunc(objs, labels, ax, jwind, fill_between=False, decomSFQ=False):
             elif curType == 'Halo':
                 mass = np.array([h.masses['virial'].d for h in objs[j].halos])
                 galpos = np.array([h.pos.d for h in objs[j].halos])
+
+            npart = objs[j].simulation.effective_resolution
+
+            proper_mlim = 64 * objs[j].simulation.critical_density.value * objs[j].simulation.boxsize.value**3 * objs[j].simulation.omega_baryon / npart**3 * objs[j].simulation.scale_factor**3/objs[j].simulation.hubble_constant**3
+            # print(proper_mlim)
+
             sfr = np.array([g.sfr.d for g in objs[j].galaxies])
             cent = np.array([g.central for g in objs[j].galaxies])
             volume = objs[j].simulation.boxsize.to('Mpccm').d**3
@@ -104,6 +114,13 @@ def massFunc(objs, labels, ax, jwind, fill_between=False, decomSFQ=False):
                              yerr=[sig,sig],
                              color=colors[j])
 
+            # add mass limit
+            if addvlineMassLimit:
+                ax0.vlines(np.log10(proper_mlim), ymin=-6.35,
+                           ymax=0.5,
+                           linestyle='--',
+                           color=colors[j])
+
             if decomSFQ:
                 # plot SF and Q separately
                 # select SF galaxies
@@ -124,7 +141,7 @@ def massFunc(objs, labels, ax, jwind, fill_between=False, decomSFQ=False):
     if smf.cond:
         ax0.errorbar(smf.x, smf.y, yerr=smf.yerr, fmt='x',
                      label=smf.name, zorder=100, color='k')
-    ax0.legend(loc='lower left', fontsize=16)
+    ax0.legend(loc='upper right', fontsize=16)
     # ax0.annotate('z=%g' % np.round(objs[j].simulation.redshift, 1), xy=(
     #     0.8, 0.75), xycoords='axes fraction', size=12, bbox=dict(boxstyle="round", fc="w"))
     plt.title(r'$z$ = %g' % np.round(objs[j].simulation.redshift, 1))
@@ -150,11 +167,10 @@ nrow = 1
 
 fig, ax = plt.subplots()
 TYPES = ['GSMF']
-massFunc(sims, labels, ax, ii, fill_between=fill_between, decomSFQ=False)
-
+massFunc(sims, labels, ax, ii, fill_between=fill_between, addvlineMassLimit=True, decomSFQ=False)
 
 plt.minorticks_on()
-plt.xlim(7,11.5)
+plt.xlim(7,11.2)
 plt.xlabel(r'$\log M_* [M_\odot]$',fontsize=18)
 plt.ylabel(r'$\log \Phi$ [Mpc$^{-3}$]',fontsize=18)
 plt.subplots_adjust(hspace=.0)
