@@ -10,29 +10,24 @@ matplotlib.rcParams.update({'figure.figsize'  : (8,5)    # inches
                             ,'font.size'       : 22      # points
                             ,'legend.fontsize' : 16      # points
                             ,'lines.linewidth' : 2       # points
-                            ,'axes.linewidth'  : 2       # points
+                            ,'axes.linewidth'  : 2.2       # points
                             ,'text.usetex'     : True    # Use LaTeX to layout text
                             ,'font.family'     : "serif" # Use serifed fonts
-                            ,'xtick.major.size'  : 6     # length, points
-                            ,'xtick.major.width' : 2     # points
-                            ,'xtick.minor.size'  : 3     # length, points
-                            ,'xtick.minor.width' : 1     # points
-                            ,'ytick.major.size'  : 6     # length, points
-                            ,'ytick.major.width' : 2     # points
-                            ,'ytick.minor.size'  : 3     # length, points
-                            ,'ytick.minor.width' : 1     # points
-                            ,'font.serif'      : ("Times"
-                                                  ,"Palatino"
-                                                  ,"Computer Modern Roman"
-                                                  ,"New Century Schoolbook"
-                                                  ,"Bookman")
-                            ,'font.sans-serif' : ("Helvetica"
-                                                  ,"Avant Garde"
-                                                  ,"Computer Modern Sans serif")
-                            ,'font.monospace'  : ("Courier"
-                                                  ,"Computer Modern Typewriter")
-                            ,'font.cursive'    : "Zapf Chancery"
-})
+                            , 'xtick.major.size': 13     # length, points
+                            , 'xtick.major.width': 1     # points
+                            , 'xtick.minor.size': 8     # length, points
+                            , 'xtick.minor.width': 1     # points
+                            , 'ytick.major.size': 13     # length, points
+                            , 'ytick.major.width': 1     # points
+                            , 'ytick.minor.size': 8     # length, points
+                            , 'xtick.labelsize': 16
+                            , 'ytick.labelsize': 16
+                            , 'ytick.minor.width': 1     # points
+                            , 'font.serif': ("Times", "Palatino", "Computer Modern Roman", "New Century Schoolbook", "Bookman"),
+                            'font.sans-serif': ("Helvetica", "Avant Garde", "Computer Modern Sans serif"),
+                            'font.monospace': ("Courier", "Computer Modern Typewriter"), 'font.cursive': "Zapf Chancery"
+                            })
+
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -129,7 +124,7 @@ def massFunc(objs, labels, ax, jwind, fill_between=False, decomSFQ=False):
     if smf.cond:
         ax0.errorbar(smf.x, smf.y, yerr=smf.yerr, fmt='x',
                      label=smf.name, zorder=100, color='k')
-    ax0.legend(loc='lower left', fontsize=13)
+    ax0.legend(loc='lower left', fontsize=16)
     # ax0.annotate('z=%g' % np.round(objs[j].simulation.redshift, 1), xy=(
     #     0.8, 0.75), xycoords='axes fraction', size=12, bbox=dict(boxstyle="round", fc="w"))
     plt.title(r'$z$ = %g' % np.round(objs[j].simulation.redshift, 1))
@@ -139,9 +134,9 @@ def massFunc(objs, labels, ax, jwind, fill_between=False, decomSFQ=False):
 colors = ('b', 'g', 'm', 'c', 'k')
 # simName = ['m25n256', 'm25n1024', 'm50n512', 'm50n1024', 'm100n1024']
 simName = ['m25n1024', 'm50n1024', 'm100n1024']
+labels = ['Simba-25', 'Simba-50', 'Simba-100']
 
 sims = []
-labels = []
 for ii, nn in enumerate(simName):
     if nn == 'm25n1024':
         caesarfile = '/mnt/ceph/users/daisyleung/simba/sim/' + nn + '/s50_new/Groups/' + nn + '_036.hdf5'
@@ -149,7 +144,6 @@ for ii, nn in enumerate(simName):
     else:
         caesarfile = '/mnt/ceph/users/daisyleung/simba/sim/' + nn + '/s50/Groups/' + nn + '_036.hdf5'
     sims.append(caesar.load(caesarfile, LoadHalo=False))
-    labels.append(nn)
 
 ncol = 1
 nrow = 1
@@ -161,8 +155,8 @@ massFunc(sims, labels, ax, ii, fill_between=fill_between, decomSFQ=False)
 
 plt.minorticks_on()
 plt.xlim(7,11.5)
-plt.xlabel(r'$\log M_* [M_\odot]$',fontsize=16)
-plt.ylabel(r'$\log \Phi$ [Mpc$^{-3}$]',fontsize=16)
+plt.xlabel(r'$\log M_* [M_\odot]$',fontsize=18)
+plt.ylabel(r'$\log \Phi$ [Mpc$^{-3}$]',fontsize=18)
 plt.subplots_adjust(hspace=.0)
 
 if fill_between:
