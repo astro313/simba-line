@@ -188,10 +188,10 @@ def plot_this_work(mass, cvolume, fig=None, ax=None, nbin=10,
     if saveFig:
         ax.set_ylabel(r'$\log \Phi$ [h$^3$ Mpc$^{-3}$]',fontsize=16)
         ax.set_xlabel(r'$\log L_{\rm [CII]} [L_\odot]$',fontsize=16)
-        ax.set_ylim([-6.3, 0.2])
+        ax.set_ylim([-6.4, 0.3])
         # ax.set_xlim([5.5, 9.])
         plt.legend(loc='best', fontsize=13)
-        plt.title('[CII] LF')
+#        plt.title('[CII] LF')
         plt.minorticks_on()
         plt.subplots_adjust(left=0.1, hspace=.0)
         plt.savefig('./CIILF.pdf',bbox_inches='tight')
@@ -219,8 +219,9 @@ def plot_ASPECS(fig, ax):
 
     ax.errorbar(8.32, -3.75,
                 xerr=0.2,
-                yerr=0.2,
+                yerr=0.4,
                 uplims=True,
+                xlolims=True,
                 marker='D',
                 markeredgecolor='black',
                 markeredgewidth=1.0,
