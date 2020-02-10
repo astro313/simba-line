@@ -26,6 +26,8 @@ import os
 import sys
 import numpy as np
 import caesar
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 
@@ -592,6 +594,7 @@ class particles2pd(object):
             # simgas, simstar, simdm = center_cut_galaxy(simgas, simstar, simdm, plot=False)
             # import pdb; pdb.set_trace()
 
+            # blah
             simgas.to_pickle(simgas_path)
             simstar.to_pickle(simstar_path)
             simdm.to_pickle(simdm_path)
@@ -623,11 +626,13 @@ class particles2pd(object):
                 central = []
                 mhalo = []
                 hid = []
+                DTM = []
+                Zmet_massweighted = []
 
-            groupID, galnames, mstar, mgas, mbh, fedd_array, sfr, sfrsd, sfrsd_manual, gassd, gassd_manual, gasR, gasR_half, starR_half, Zgas, Zstar, fgas, fh2, gdr, central, mhalo, hid = link_caesarGalProp_galname(gal, galname, gg, groupID, galnames, mstar, mgas, mbh, fedd_array, sfr, sfrsd, sfrsd_manual, gassd, gassd_manual, gasR, gasR_half, starR_half, Zgas, Zstar, fgas, fh2, gdr, central, mhalo, hid, _SFRSD, _gasSD, np.sum(gas_f_H2 * gas_m)/np.sum(gas_m), bhmdot)
+            groupID, galnames, mstar, mgas, mbh, fedd_array, sfr, sfrsd, sfrsd_manual, gassd, gassd_manual, gasR, gasR_half, starR_half, Zgas, Zstar, fgas, fh2, gdr, central, mhalo, hid, DTM, Zmet_massweighted = link_caesarGalProp_galname(gal, galname, gg, groupID, galnames, mstar, mgas, mbh, fedd_array, sfr, sfrsd, sfrsd_manual, gassd, gassd_manual, gasR, gasR_half, starR_half, Zgas, Zstar, fgas, fh2, gdr, central, mhalo, hid, _SFRSD, _gasSD, np.sum(gas_f_H2 * gas_m)/np.sum(gas_m), bhmdot, DTM, Zmet_massweighted)
 
         # link galname to galaxy properties from caesar
-        gal_prop = dict.fromkeys(['GroupID', 'galnames', 'Mstar', 'Mgas', 'MBH', 'fedd', 'SFR', 'SFRSD_gasR_caesar', 'SFRSD_gasR_manual', 'gasSD_caesar', 'gasSD_manual', 'r_gas', 'r_gas_half_mass', 'r_stellar_half_mass', 'Zsfr', 'Zstellar', 'fgas', 'f_H2_fromSnap', 'DGR', 'Central', 'Mhalo_parent', 'HID'])
+        gal_prop = dict.fromkeys(['GroupID', 'galnames', 'Mstar', 'Mgas', 'MBH', 'fedd', 'SFR', 'SFRSD_gasR_caesar', 'SFRSD_gasR_manual', 'gasSD_caesar', 'gasSD_manual', 'r_gas', 'r_gas_half_mass', 'r_stellar_half_mass', 'Zsfr', 'Zstellar', 'Zmass', 'fgas', 'f_H2_fromSnap', 'DGR', 'DTM', 'Central', 'Mhalo_parent', 'HID'])
 
         gal_prop['GroupID'] = groupID
         gal_prop['galnames'] = galnames
@@ -645,9 +650,11 @@ class particles2pd(object):
         gal_prop['r_stellar_half_mass'] = starR_half
         gal_prop['Zsfr'] = Zgas
         gal_prop['Zstellar'] = Zstar
+        gal_prop['Zmass'] = Zmet_massweighted
         gal_prop['fgas'] = fgas
         gal_prop['f_H2_fromSnap'] = fh2
         gal_prop['DGR'] = gdr
+        gal_prop['DTM'] = DTM
         gal_prop['Central'] = central
         gal_prop['Mhalo_parent'] = mhalo
         gal_prop['HID'] = hid
@@ -736,13 +743,19 @@ def calc_gasSD_inside_half_mass(galObj, gas_m, gas_pos, halfMassR='gas'):
     extent = np.sqrt(gas_pos[:, 0]**2 + gas_pos[:, 1]**2 + gas_pos[:, 2]**2)
     mask = extent <= half_mass_radius
     gasSD = np.sum(gas_m[mask])/np.pi/(half_mass_radius*1.e3)**2
-    print("gas SD: ")
+    print("gas SD from particles within half-mass: ")
     print(gasSD)
+    print("gas SD from global gas mass: ")
     print(galObj.masses['gas'] / np.pi / (half_mass_radius*1.e3)**2)
+
+    print(galObj.masses['gas'])
+    print(np.sum(gas_m[mask]))
+    # hmmm.....
+    # import pdb; pdb.set_trace()
     return gasSD
 
 
-def link_caesarGalProp_galname(galObj, galname, index, groupID, galnames, mstar, mgas, mbh, fedd_array, sfr, sfrsd, sfrsd_manual, gassd, gassd_manual, gasR, gasR_half, starR_half, Zgas, Zstar, fgas, fh2, gdr, central, mhalo, hid, SFRSD_manual, gasSD_manual, f_h2, bhmdot, frad=0.1):
+def link_caesarGalProp_galname(galObj, galname, index, groupID, galnames, mstar, mgas, mbh, fedd_array, sfr, sfrsd, sfrsd_manual, gassd, gassd_manual, gasR, gasR_half, starR_half, Zgas, Zstar, fgas, fh2, gdr, central, mhalo, hid, SFRSD_manual, gasSD_manual, f_h2, bhmdot, DTM, Zmet_massweighted, frad=0.1):
     """
 
     link galaixes properties from CAESAR via galname so we know all the properties of a given galaxy after running sigame
@@ -757,7 +770,7 @@ def link_caesarGalProp_galname(galObj, galname, index, groupID, galnames, mstar,
     index: int
         index corresponding to that galaxy
 
-    groupID, galnames, mstar, mgas, mbh, fedd_array, sfr, sfrsd, sfrsd_manual, gassd, gassd_manual, gasR, gasR_half, starR_half, Zgas, Zstar, fgas, fh2, gdr, central, mhalo, hid: array or list
+    groupID, galnames, mstar, mgas, mbh, fedd_array, sfr, sfrsd, sfrsd_manual, gassd, gassd_manual, gasR, gasR_half, starR_half, Zgas, Zstar, fgas, fh2, gdr, central, mhalo, hid, DTM, Zmet_massweighted: array or list
 
     SFRSD_manual: float
         from calc_SFRSD_inside_half_mass()
@@ -823,7 +836,14 @@ def link_caesarGalProp_galname(galObj, galname, index, groupID, galnames, mstar,
     mhalo.append(phm)
     hid.append(phid)
 
-    return groupID, galnames, mstar, mgas, mbh, fedd_array, sfr, sfrsd, sfrsd_manual, gassd, gassd_manual, gasR, gasR_half, starR_half, Zgas, Zstar, fgas, fh2, gdr, central, mhalo, hid
+    Met = galObj.metallicities['mass_weighted'] / 0.0134
+    Zmet_massweighted.append(Zmet)
+
+    Mgmet = Met * (galObj.masses['gas'] - galObj.masses['dust'])
+    dtm = np.log10(galObj.masses['dust'] / (Mgmet + galObj.masses['dust']) + 1.e-9)
+    DTM.append(dtm)
+
+    return groupID, galnames, mstar, mgas, mbh, fedd_array, sfr, sfrsd, sfrsd_manual, gassd, gassd_manual, gasR, gasR_half, starR_half, Zgas, Zstar, fgas, fh2, gdr, central, mhalo, hid, DTM, Zmet_massweighted
 
 
 def rename_duplicates_across_vol(count, ggg1, ggg2, vol1='25', vol2='50', verbose=True):
