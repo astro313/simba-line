@@ -79,7 +79,9 @@ def sfrf_data(zbin, ax):
     return
 
 
-def massFunc(objs, labels, ax, jwind, fill_between=True, showtitle=False):
+def massFunc(objs, labels, ax, jwind, fill_between=True, showtitle=False, addvlineSFRLimit=False):
+
+    turnover_SFR = []
     for j in range(0, len(objs)):
         for curType in TYPES:
             galpos = np.array([g.pos.d for g in objs[j].galaxies])
@@ -127,6 +129,11 @@ def massFunc(objs, labels, ax, jwind, fill_between=True, showtitle=False):
             elo = sig
             ehi = sig
 
+            # find turnover for thresholding in SFR for paper
+            _bu = np.diff(y)
+            iii = np.where(_bu < 0)[0][0]
+            import pdb; pdb.set_trace()
+            turnover_SFR.append(x[iii])
 
             if fill_between:
                 ax0.plot(np.log10(x) + j * 0.001, np.log10(y), '--',
@@ -142,6 +149,13 @@ def massFunc(objs, labels, ax, jwind, fill_between=True, showtitle=False):
                              yerr=[elo, ehi],
                              color=colors[j], label=labels[j])
 
+            # add SFR limit
+            if addvlineSFRLimit:
+                ax0.vlines(np.log10(x[iii]),
+                           ymin=-6.35,
+                           ymax=0.5,
+                           linestyle='--',
+                           color=colors[j])
 
     sfrf_data(objs[j].simulation.redshift, ax0)
     ax0.legend(loc='best', fontsize=16)
@@ -149,7 +163,7 @@ def massFunc(objs, labels, ax, jwind, fill_between=True, showtitle=False):
     #     0.8, 0.75), xycoords='axes fraction', size=12, bbox=dict(boxstyle="round", fc="w"))
     if showtitle:
         plt.title(r'$z$ = %g' % np.round(objs[j].simulation.redshift, 1))
-    return None
+    return turnover_SFR
 
 colors = ('b', 'g', 'm', 'c', 'k')
 # simName = ['m25n256', 'm25n1024', 'm50n512', 'm50n1024', 'm100n1024']
@@ -170,8 +184,8 @@ nrow = 1
 
 fig, ax = plt.subplots()
 TYPES = ['SFR']
-massFunc(sims, labels, ax, ii)
-
+turnover_SFR = massFunc(sims, labels, ax, ii, addvlineSFRLimit=True)
+print(np.log10(turnover_SFR))
 
 plt.minorticks_on()
 plt.xlabel(r'$\log$ SFR $[M_\odot$ yr$^{-1}]$', fontsize=18)
