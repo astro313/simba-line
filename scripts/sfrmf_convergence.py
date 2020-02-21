@@ -132,7 +132,6 @@ def massFunc(objs, labels, ax, jwind, fill_between=True, showtitle=False, addvli
             # find turnover for thresholding in SFR for paper
             _bu = np.diff(y)
             iii = np.where(_bu < 0)[0][0]
-            import pdb; pdb.set_trace()
             turnover_SFR.append(x[iii])
 
             if fill_between:
